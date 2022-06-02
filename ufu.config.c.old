@@ -1,0 +1,1448 @@
+
+#include "ufu.h"
+#include "ufu.p"
+
+int ufu_read_config(struct s_env *env,int panel,char *cfgfile,int argc,char **argv) {
+
+  int f_debug,f_version;
+  int offset,found,i,j;
+  int dir_count,cmd_count,rem_count;
+  char hdr,sortc,sorto;
+  char *line1,*line2;
+  struct s_ucmd *uc;
+  struct s_remote *rh;
+  FILE *fp;
+
+  uc=ufu_alloc_ucmd(env);
+  rh=ufu_alloc_remote(env);
+
+  if(strcmp(cfgfile,UFU_GLOBAL_CONFIG)==0) {
+    // Panel #0 is the panel with the files of you own homedirectory.
+    strcpy(env->panel[panel]->dirname,env->homedir);
+    sprintf(env->msg,"Putting HOMEDIR (%s) in panel #%d.",env->panel[panel]->dirname,panel);
+    ufu_log(env);
+
+    env->panel[panel]->local=FALSE;
+    env->panel[panel]->remote=FALSE;
+
+    // Put WORKDIR in panel #1, if different from HOMEDIR in panel #0.
+    if(strcmp(env->homedir,env->workdir)!=0) {
+
+      // Panel #1 is the panel with the files of your working directory.
+      panel++;
+      strcpy(env->panel[panel]->dirname,env->workdir);
+      sprintf(env->msg,"Putting WORKDIR (%s) in panel #%d.",env->panel[panel]->dirname,panel);
+      ufu_log(env);
+
+      env->panel[panel]->local=FALSE;
+      env->panel[panel]->remote=FALSE;
+
+    }
+
+    f_debug=FALSE;
+    f_version=FALSE;
+
+    // Process comandline arguments, if they exists.
+    if(argc>0) {
+
+      i=1;
+      while(i<argc) {
+
+        f_debug=(strcmp(argv[i],"-d")==0);
+        f_version=(strcmp(argv[i],"-v")==0);
+
+        if((!f_debug)&&(!f_version)) {
+
+          found=FALSE;
+
+          j=0;
+          while(j<=panel) {
+
+            if(!found) {
+              found=(strcmp(env->panel[j]->dirname,argv[i])==0);
+            }
+
+            j++;
+
+          }
+
+          if(!found) {
+
+            if(ufu_direxist(env,argv[i])) {
+
+              panel++;
+
+              strcpy(env->panel[panel]->dirname,argv[i]);
+              sprintf(env->msg,"Putting arg #%d (%s) in panel #%d.",i,env->panel[panel]->dirname,panel);
+              ufu_log(env);
+
+              env->panel[panel]->local=FALSE;
+              env->panel[panel]->remote=FALSE;
+
+            }
+            else {
+
+              sprintf(env->msg,"Ignoring arg #%d (%s), unreadable directory!",i,argv[i]);
+              ufu_log(env);
+
+            }
+
+          }
+          else {
+
+            sprintf(env->msg,"Ignoring arg #%d (%s), already exist in arguments!",i,argv[i]);
+            ufu_log(env);
+
+          }
+
+        }
+
+        i++;
+
+      }
+
+    }
+
+    if(env->mpanel<panel) {
+
+      sprintf(env->msg,"Adjusting max panels from %d to %d.",env->mpanel,panel);
+      ufu_log(env);
+
+      env->mpanel=panel;
+
+    }
+
+    // Create initial usercommand (spot #0).
+    cmd_count=0;
+    strcpy(uc->exec,UFU_INITIAL_UCMD);
+    ufu_add_ucmd(env,uc,strcmp(cfgfile,UFU_GLOBAL_CONFIG)!=0);
+    sprintf(env->msg,"Created initial usercommand entry.");
+    ufu_log(env);
+    sprintf(env->msg,"Created CMD #%02d: %s.",cmd_count,UFU_INITIAL_UCMD);
+    ufu_log(env);
+    cmd_count++;
+
+  }
+
+  if((fp=fopen(cfgfile,"r"))!=NULL) {
+
+    sprintf(env->msg,"Scanning config (%s)",cfgfile);
+    ufu_log(env);
+
+    line1=ufu_alloc_string(env,128);
+    line2=ufu_alloc_string(env,128);
+
+    dir_count=0;
+    rem_count=0;
+
+    while(fgets(line1,128,fp)!=NULL) {
+
+      // Ignore comments.
+      if(line1[0]!='#') {
+
+/*
+        // Extract DEBUG (debugging on/off) from configfile.
+        if(strstr(line1,"DEBUG=")) {
+          env->debug=(tolower(*(line1+6))=='y');
+          if(env->debug)
+            sprintf(env->msg," Setting DEBUG to TRUE");
+          else
+            sprintf(env->msg," Setting DEBUG to FALSE");
+          ufu_log(env);
+        }
+*/
+
+        // Extract EDITOR from configfile.
+        if(strstr(line1,"EDITOR=")) {
+          strcpy(line2,line1+7);
+          line2[strlen(line2)-1]='\0';
+          strcpy(env->editor,line2);
+          sprintf(env->msg," Found EDITOR (%s).",env->editor);
+          ufu_log(env);
+        }
+
+        // Extract VIEWER from configfile.
+        if(strstr(line1,"VIEWER=")) {
+          strcpy(line2,line1+7);
+          line2[strlen(line2)-1]='\0';
+          strcpy(env->viewer,line2);
+          sprintf(env->msg," Found VIEWER (%s).",env->viewer);
+          ufu_log(env);
+        }
+
+        // Extract PANELS (max number of panels allowed) from configfile.
+        if(strstr(line1,"PANELS=")) {
+          strcpy(line2,line1+7);
+          env->mpanel=atoi(line2);
+          sprintf(env->msg," Found PANELS (%d).",env->mpanel);
+          ufu_log(env);
+          if(env->mpanel<UFU_MAX_PANEL_LOW) {
+            sprintf(env->msg," Setting PANELS to %d.",UFU_MAX_PANEL_LOW);
+            ufu_log(env);
+            env->mpanel=UFU_MAX_PANEL_LOW;
+          }
+          if(env->mpanel>UFU_MAX_PANEL) {
+            sprintf(env->msg," Setting PANELS to %d.",UFU_MAX_PANEL);
+            ufu_log(env);
+            env->mpanel=UFU_MAX_PANEL;
+          }
+        }
+
+        // Extract WIDTH (number of columns) from configfile.
+        if(strstr(line1,"ROWS=")) {
+          strcpy(line2,line1+5);
+          env->cfg_rows=atoi(line2);
+          sprintf(env->msg," Found ROWS (%d).",env->cfg_rows);
+          ufu_log(env);
+        }
+
+        // Extract HEIGHT (number of rowe) from configfile.
+        if(strstr(line1,"COLUMNS=")) {
+          strcpy(line2,line1+8);
+          env->cfg_cols=atoi(line2);
+          sprintf(env->msg," Found COLUMNS (%d).",env->cfg_cols);
+          ufu_log(env);
+        }
+
+        // Max entries to mark.
+        if(strstr(line1,"MAX_TO_MARK=")) {
+          strcpy(line2,line1+12);
+          env->max_to_mark=atoi(line2);
+          sprintf(env->msg," Found MAX_TO_MARK (%d).",env->max_to_mark);
+          ufu_log(env);
+        }
+
+        // Confirmation of quit actions.
+        if(strstr(line1,"CONFIRMQUIT=")) {
+          strcpy(line2,line1+12);
+          env->confirmquit=(tolower(*line2)=='y');
+          if(env->confirmquit)
+            sprintf(env->msg," Setting CONFIRMQUIT to TRUE");
+          else
+            sprintf(env->msg," Setting CONFIRMQUIT to FALSE");
+          ufu_log(env);
+        }
+
+        // Confirmation of copy actions.
+        if(strstr(line1,"CONFIRMCOPY=")) {
+          strcpy(line2,line1+12);
+          env->confirmcopy=(tolower(*line2)=='y');
+          if(env->confirmcopy)
+            sprintf(env->msg," Setting CONFIRMCOPY to TRUE");
+          else
+            sprintf(env->msg," Setting CONFIRMCOPY to FALSE");
+          ufu_log(env);
+        }
+
+        // Confirmation of move actions.
+        if(strstr(line1,"CONFIRMMOVE=")) {
+          strcpy(line2,line1+12);
+          env->confirmmove=(tolower(*line2)=='y');
+          if(env->confirmmove)
+            sprintf(env->msg," Setting CONFIRMMOVE to TRUE");
+          else
+            sprintf(env->msg," Setting CONFIRMMOVE to FALSE");
+          ufu_log(env);
+        }
+
+        // Confirmation of remove actions.
+        if(strstr(line1,"CONFIRMREMOVE=")) {
+          strcpy(line2,line1+14);
+          env->confirmremove=(tolower(*line2)=='y');
+          if(env->confirmremove)
+            sprintf(env->msg," Setting CONFIRMREMOVE to TRUE");
+          else
+            sprintf(env->msg," Setting CONFIRMREMOVE to FALSE");
+          ufu_log(env);
+        }
+
+        // Query for action confirmation
+        if(strstr(line1,"CONFIRMACTION=")) {
+          strcpy(line2,line1+12);
+          env->confirmaction=(tolower(*line2)=='y');
+          if(env->confirmaction)
+            sprintf(env->msg," Setting CONFIRMACTION to TRUE");
+          else
+            sprintf(env->msg," Setting CONFIRMACTION to FALSE");
+          ufu_log(env);
+        }
+
+        // Include subdirectories.
+        if(strstr(line1,"INCSUBDIRS=")) {
+          strcpy(line2,line1+11);
+          env->incsubdir=(tolower(*line2)=='y');
+          if(env->incsubdir)
+            sprintf(env->msg," Setting INCSUBDIRS to TRUE");
+          else
+            sprintf(env->msg," Setting INCSUBDIRS to FALSE");
+          ufu_log(env);
+        }
+
+        // Ignore errors?
+        if(strstr(line1,"IGNOREERROR=")) {
+          strcpy(line2,line1+12);
+          env->ignoreerror=(tolower(*line2)=='y');
+          if(env->ignoreerror)
+            sprintf(env->msg," Setting IGNOREERROR to TRUE");
+          else
+            sprintf(env->msg," Setting IGNOREERROR to FALSE");
+          ufu_log(env);
+        }
+
+        // Show directories first.
+        if(strstr(line1,"DIRFIRST=")) {
+          strcpy(line2,line1+9);
+          env->dirfirst=(tolower(*line2)=='y');
+          if(env->dirfirst)
+            sprintf(env->msg," Setting DIRFIRST to TRUE");
+          else
+            sprintf(env->msg," Setting DIRFIRST to FALSE");
+          ufu_log(env);
+        }
+
+        // Extract usercommand from configfile.
+        if(strstr(line1,"CMD=")) {
+          strcpy(line2,line1+4);
+          line2[strlen(line2)-1]='\0';
+          strcpy(uc->exec,line2);
+          ufu_add_ucmd(env,uc,strcmp(cfgfile,UFU_GLOBAL_CONFIG)!=0);
+          sprintf(env->msg," Found CMD #%02d: %s.",cmd_count,line2);
+          ufu_log(env);
+          cmd_count++;
+        }
+
+        // Extract remote hosts from configfile.
+        if(strstr(line1,"REMOTE=")) {
+          strcpy(line2,line1+7);
+          line2[strlen(line2)-1]='\0';
+          strcpy(rh->hostname,"\0");
+          strcpy(rh->username,"\0");
+          strcpy(rh->password,"\0");
+          rh->port=0;
+          if(ufu_split_remote(env,rh,line2,strcmp(cfgfile,UFU_GLOBAL_CONFIG)!=0)) {
+            ufu_add_remote(env,rh,strcmp(cfgfile,UFU_GLOBAL_CONFIG)!=0);
+            sprintf(env->msg," Found REMOTE #%02d: host=%s,port=%d,user=%s.",rem_count,rh->hostname,rh->port,rh->username);
+            ufu_log(env);
+            rem_count++;
+          }
+        }
+
+        // Extract minimum number of history lines from configfile.
+        if(strstr(line1,"HISTORY_MIN=")) {
+          strcpy(line2,line1+12);
+          line2[strlen(line2)-1]='\0';
+          env->history_min=atoi(line2);
+          sprintf(env->msg," Found MIN HISTORY (%d).",env->history_min);
+          ufu_log(env);
+        }
+
+        // Extract maximum number of history lines from configfile.
+        if(strstr(line1,"HISTORY_MAX=")) {
+          strcpy(line2,line1+12);
+          line2[strlen(line2)-1]='\0';
+          env->history_max=atoi(line2);
+          sprintf(env->msg," Found MAX HISTORY (%d).",env->history_max);
+          ufu_log(env);
+        }
+
+        // Extract TIMEOUT from configfile.
+        if(strstr(line1,"TIMEOUT=")) {
+          strcpy(line2,line1+8);
+          line2[strlen(line2)-1]='\0';
+          env->timeout=atoi(line2);
+          sprintf(env->msg," Found TIMEOUT (%d).",env->timeout);
+          ufu_log(env);
+        }
+
+        // Extract TIMEOUT_RETRY from configfile.
+        if(strstr(line1,"TIMEOUT_RETRY=")) {
+          strcpy(line2,line1+14);
+          line2[strlen(line2)-1]='\0';
+          env->timeout_retry=atoi(line2);
+          sprintf(env->msg," Found TIMEOUT_RETRY (%d).",env->timeout_retry);
+          ufu_log(env);
+        }
+
+        // Extract TIMEIN from configfile.
+        if(strstr(line1,"TIMEIN=")) {
+          strcpy(line2,line1+7);
+          line2[strlen(line2)-1]='\0';
+          env->timein=atoi(line2);
+          sprintf(env->msg," Found TIMEIN (%d).",env->timein);
+          ufu_log(env);
+        }
+
+        // Extract TIMEIN_RETRY from configfile.
+        if(strstr(line1,"TIMEIN_RETRY=")) {
+          strcpy(line2,line1+13);
+          line2[strlen(line2)-1]='\0';
+          env->timein_retry=atoi(line2);
+          sprintf(env->msg," Found TIMEIN_RETRY (%d).",env->timein_retry);
+          ufu_log(env);
+        }
+
+        // Extract paneldirectory from configfile.
+        if(strstr(line1,"DIR=")) {
+          if(panel<env->mpanel) {
+            strcpy(line2,line1+4);
+            line2[strlen(line2)-1]='\0';
+            if(ufu_direxist(env,line2+4)) {
+              panel++;
+              offset=0;
+              hdr='S';
+              sortc='f';
+              sorto='a';
+              env->panel[panel]->header=UFU_HDR_STD;
+              if((strlen(line2)>4)&&(line2[3]==':')) {
+                /*
+                 * Format: [HCO,]directoryname
+                 * Whereis:
+                 *    H - Header:
+                 *      S - Standard,
+                 *      A - Date/Time of last access,
+                 *      M - Date/Time of last modification,
+                 *      C - Date/Time of last change.
+                 *    C - Columns to sort on:
+                 *      F - Filename,
+                 *      S - Size,
+                 *      A - Date/Time of last access,
+                 *      M - Date/Time of last modification,
+                 *      C - Date/Time of last change.
+                 *    O - Sort order:
+                 *      A - Ascending,
+                 *      D - Descending.
+                 */
+                offset=4;
+                hdr=line2[0];
+                sortc=line2[1];
+                sorto=line2[2];
+                switch(hdr) {
+                  case 'S':
+                  case 's':
+                    env->panel[panel]->header=UFU_HDR_STD;
+                    break;
+                  case 'A':
+                  case 'a':
+                    env->panel[panel]->header=UFU_HDR_LA;
+                    break;
+                  case 'M':
+                  case 'm':
+                    env->panel[panel]->header=UFU_HDR_LM;
+                    break;
+                  case 'C':
+                  case 'c':
+                    env->panel[panel]->header=UFU_HDR_LC;
+                    break;
+                }
+                switch(sortc) {
+                  case 'F':
+                  case 'f':
+                    env->panel[panel]->sortc=UFU_SORT_FNAME;
+                    break;
+                  case 'S':
+                  case 's':
+                    env->panel[panel]->sortc=UFU_SORT_SIZE;
+                    break;
+                  case 'A':
+                  case 'a':
+                    env->panel[panel]->sortc=UFU_SORT_LA;
+                    break;
+                  case 'M':
+                  case 'm':
+                    env->panel[panel]->sortc=UFU_SORT_LM;
+                    break;
+                  case 'C':
+                  case 'c':
+                    env->panel[panel]->sortc=UFU_SORT_LC;
+                    break;
+                }
+                switch(sorto) {
+                  case 'A':
+                  case 'a':
+                    env->panel[panel]->sorto=UFU_SORT_ASC;
+                    break;
+                  case 'D':
+                  case 'd':
+                    env->panel[panel]->sorto=UFU_SORT_DSC;
+                    break;
+                }
+              }
+
+              strcpy(env->panel[panel]->dirname,line2+offset);
+              dir_count++;
+              env->panel[panel]->local=(strcmp(cfgfile,UFU_GLOBAL_CONFIG)!=0);
+              env->panel[panel]->remote=FALSE;
+              if(env->panel[panel]->local)
+                sprintf(env->msg," Found (local) DIR #%02d: %s,%c%c%c for panel #%d.",dir_count,env->panel[panel]->dirname,tolower(hdr),tolower(sortc),tolower(sorto),panel);
+              else
+                sprintf(env->msg," Found (global) DIR #%02d: %s,%c%c%c for panel #%d.",dir_count,env->panel[panel]->dirname,tolower(hdr),tolower(sortc),tolower(sorto),panel);
+              ufu_log(env);
+            }
+            else {
+              sprintf(env->msg," Ignoring DIR (%s), unreadable directory!",line2+4);
+              ufu_log(env);
+            }
+          }
+          else {
+            sprintf(env->msg," Ignoring DIR (%s). No panels left!",env->panel[panel]->dirname);
+            ufu_log(env);
+          }
+        }
+
+      }
+
+    }
+
+    fclose(fp);
+
+    sprintf(env->msg,"End of scan.");
+    ufu_log(env);
+
+    if(env->mpanel<panel) {
+
+      sprintf(env->msg,"Adjusting max panels from %d to %d.",env->mpanel,panel);
+      ufu_log(env);
+
+      env->mpanel=panel;
+
+    }
+
+    ufu_free_ucmd(env,uc);
+    ufu_free_remote(env,rh);
+
+    ufu_free_string(env,line1);
+    ufu_free_string(env,line2);
+
+  }
+  else {
+
+    sprintf(env->msg,"Configfile \"%s\" not found.",cfgfile);
+    ufu_log(env);
+
+  }
+
+  return(panel);
+
+}
+
+void ufu_write_config(struct s_env *env) {
+
+  int p,found;
+  char hdr,sortc,sorto;
+  char *line;
+
+  struct s_ucmd *uc;
+  struct s_remote *rh;
+
+  FILE *fp;
+
+  if((fp=fopen(env->cfglocal,"w"))!=NULL) {
+
+    sprintf(env->msg,"Start writing config (%s).",env->cfglocal);
+    ufu_log(env);
+
+    sprintf(env->msg,"Writing config (%s)",env->cfglocal);
+    ufu_msg(env);
+
+    line=ufu_alloc_string(env,256);
+
+/*
+    sprintf(line,"# DEBUG: Set this program in DEBUG mode.\n");
+    fputs(line,fp);
+    sprintf(line,"#        Gives us more logging.\n");
+    fputs(line,fp);
+    if(env->debug)
+      sprintf(line,"DEBUG=Y\n");
+    else
+      sprintf(line,"DEBUG=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+*/
+
+    sprintf(line,"# EDITOR: Use this as the default (read/write) editor.\n");
+    fputs(line,fp);
+    sprintf(line,"EDITOR=%s\n",env->editor);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# VIEWER: Use this as the default (read only) viewer.\n");
+    fputs(line,fp);
+    sprintf(line,"VIEWER=%s\n",env->viewer);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# HISTORY: Minimum number of entries retained in the history structure.\n");
+    fputs(line,fp);
+    sprintf(line,"#          Default 99\n");
+    fputs(line,fp);
+    sprintf(line,"HISTORY_MIN=%d\n",env->history_min);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# HISTORY: Maximum number of entries retained in the history structure.\n");
+    fputs(line,fp);
+    sprintf(line,"#          Default 99\n");
+    fputs(line,fp);
+    sprintf(line,"HISTORY_MAX=%d\n",env->history_max);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# ROWS: Screensize - Number of rows.\n");
+    fputs(line,fp);
+    sprintf(line,"#       Is only used if the program can't find this value in the environment.\n");
+    fputs(line,fp);
+    sprintf(line,"#       Minimum value is 24.\n");
+    fputs(line,fp);
+    sprintf(line,"ROWS=24\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# COLUMNS: Screensize - Number of columns.\n");
+    fputs(line,fp);
+    sprintf(line,"#          Is only used if the program can't find this value in the environment.\n");
+    fputs(line,fp);
+    sprintf(line,"#          Minimum value is 80.\n");
+    fputs(line,fp);
+    sprintf(line,"COLUMNS=80\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# PANELS: Maximum number of panels allowed.\n");
+    fputs(line,fp);
+    sprintf(line,"#         Do NOT change this value unless told otherwise!\n");
+    fputs(line,fp);
+    sprintf(line,"#         Minimum value is %d.\n",UFU_MAX_PANEL_LOW);
+    fputs(line,fp);
+    sprintf(line,"PANELS=%d\n",env->mpanel);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# MAX_TO_MARK: Max entries to mark.\n");
+    fputs(line,fp);
+    sprintf(line,"#       This is the maximum number of entries UFU can mark.\n");
+    fputs(line,fp);
+    sprintf(line,"#       Default value is 1024, 1K entries.\n");
+    fputs(line,fp);
+    sprintf(line,"MAX_TO_MARK=%d\n",env->max_to_mark);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# CONFIRMCOPY: Confirmation of copy actions.\n");
+    fputs(line,fp);
+    sprintf(line,"#              Default Y(es)\n");
+    fputs(line,fp);
+    if(env->confirmcopy)
+      sprintf(line,"CONFIRMCOPY=Y\n");
+    else
+      sprintf(line,"CONFIRMCOPY=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# CONFIRMQUIT: Confirmation of quit actions.\n");
+    fputs(line,fp);
+    sprintf(line,"#              Default Y(es)\n");
+    fputs(line,fp);
+    if(env->confirmquit)
+      sprintf(line,"CONFIRMQUIT=Y\n");
+    else
+      sprintf(line,"CONFIRMQUIT=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# CONFIRMMOVE: Confirmation of move actions.\n");
+    fputs(line,fp);
+    sprintf(line,"#              Default Y(es)\n");
+    fputs(line,fp);
+    if(env->confirmmove)
+      sprintf(line,"CONFIRMMOVE=Y\n");
+    else
+      sprintf(line,"CONFIRMMOVE=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# CONFIRMREMOVE: Confirmation of remove actions.\n");
+    fputs(line,fp);
+    sprintf(line,"#                Default Y(es)\n");
+    fputs(line,fp);
+    if(env->confirmremove)
+      sprintf(line,"CONFIRMREMOVE=Y\n");
+    else
+      sprintf(line,"CONFIRMREMOVE=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# CONFIRMACTION: Query for action confirmation.\n");
+    fputs(line,fp);
+    sprintf(line,"#                Default Y(es)\n");
+    fputs(line,fp);
+    if(env->confirmaction)
+      sprintf(line,"CONFIRMACTION=Y\n");
+    else
+      sprintf(line,"CONFIRMACTION=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# INCSUBDIRS: Include subdirectories.\n");
+    fputs(line,fp);
+    sprintf(line,"#             Default N(o)\n");
+    fputs(line,fp);
+    if(env->incsubdir)
+      sprintf(line,"INCSUBDIRS=Y\n");
+    else
+      sprintf(line,"INCSUBDIRS=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# IGNOREERROR: Ignore errors on copy/[re]move actions.\n");
+    fputs(line,fp);
+    sprintf(line,"#              Default N(o)\n");
+    fputs(line,fp);
+    if(env->ignoreerror)
+      sprintf(line,"IGNOREERROR=Y\n");
+    else
+      sprintf(line,"IGNOREERROR=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# DIRFIRST: Show directories first before the regular files.\n");
+    fputs(line,fp);
+    sprintf(line,"#           Default Y(es)\n");
+    fputs(line,fp);
+    if(env->dirfirst)
+      sprintf(line,"DIRFIRST=Y\n");
+    else
+      sprintf(line,"DIRFIRST=N\n");
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# TIMEOUT: Transfer timeout, output.\n");
+    fputs(line,fp);
+    sprintf(line,"#          Default 100\n");
+    fputs(line,fp);
+    sprintf(line,"TIMEOUT=%d\n",env->timeout);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# TIMEOUT_RETRY: Retry transfer timeout.\n");
+    fputs(line,fp);
+    sprintf(line,"#                Default 4\n");
+    fputs(line,fp);
+    sprintf(line,"TIMEOUT_RETRY=%d\n",env->timeout_retry);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# TIMEIN: Transfer timeout, input.\n");
+    fputs(line,fp);
+    sprintf(line,"#         Default 100\n");
+    fputs(line,fp);
+    sprintf(line,"TIMEIN=%d\n",env->timein);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# TIMEIN_RETRY: Retry transfer timeout.\n");
+    fputs(line,fp);
+    sprintf(line,"#               Default 4\n");
+    fputs(line,fp);
+    sprintf(line,"TIMEIN_RETRY=%d\n",env->timein_retry);
+    fputs(line,fp);
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    uc=env->ucfirst;
+    if(uc!=NULL) {
+      found=FALSE;
+      while((uc!=NULL)&&(!found)) {
+        if(!found)  found=uc->local;
+        uc=uc->next;
+      }
+      if(found) {
+        uc=env->ucfirst;
+        sprintf(line,"# CMD: Usercommands.\n");
+        fputs(line,fp);
+        while(uc!=NULL) {
+          if(uc->local) {
+            sprintf(line,"CMD=%s\n",uc->exec);
+            fputs(line,fp);
+          }
+          uc=uc->next;
+        }
+      }
+    }
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    rh=env->rhfirst;
+    if(rh!=NULL) {
+      found=FALSE;
+      while((rh!=NULL)&&(!found)) {
+        if(!found)  found=rh->local;
+        rh=rh->next;
+      }
+      if(found) {
+        rh=env->rhfirst;
+        sprintf(line,"# REMOTE: Remote hosts.\n");
+        fputs(line,fp);
+        sprintf(line,"#         host:port:username[:dirname]\n");
+        fputs(line,fp);
+        while(rh!=NULL) {
+          sprintf(line,"REMOTE=%s:%d:%s:%s\n",rh->hostname,rh->port,rh->username,rh->dirname);
+          fputs(line,fp);
+          rh=rh->next;
+        }
+      }
+    }
+
+    sprintf(line,"\n");
+    fputs(line,fp);
+
+    sprintf(line,"# DIR: List of current available panels.\n");
+    fputs(line,fp);
+
+    p=UFU_MIN_PANEL+2;
+    while((p<env->mpanel)&&(strlen(env->panel[p]->dirname)>0)) {
+
+      if(env->panel[p]->local) {
+
+        sprintf(env->msg," Writing panel #%d (%s).",p,env->panel[p]->dirname);
+        ufu_log(env);
+
+        switch(env->panel[p]->header) {
+          case UFU_HDR_STD:
+            hdr='s';
+            break;
+          case UFU_HDR_LA:
+            hdr='a';
+            break;
+          case UFU_HDR_LM:
+            hdr='m';
+            break;
+          case UFU_HDR_LC:
+            hdr='c';
+            break;
+        }
+
+        switch(env->panel[p]->sortc) {
+          case UFU_SORT_FNAME:
+            sortc='f';
+            break;
+          case UFU_SORT_SIZE:
+            sortc='s';
+            break;
+          case UFU_SORT_LA:
+            sortc='a';
+            break;
+          case UFU_SORT_LM:
+            sortc='m';
+            break;
+          case UFU_SORT_LC:
+            sortc='c';
+            break;
+        }
+
+        switch(env->panel[p]->sorto) {
+          case UFU_SORT_ASC:
+            sorto='a';
+            break;
+          case UFU_SORT_DSC:
+            sorto='d';
+            break;
+        }
+
+        sprintf(line,"DIR=%c%c%c:%s\n",hdr,sortc,sorto,env->panel[p]->dirname);
+        fputs(line,fp);
+
+      }
+      else {
+
+        sprintf(env->msg," Skipping global panel #%d (%s).",p,env->panel[p]->dirname);
+        ufu_log(env);
+
+      }
+
+      p++;
+
+    }
+
+    fclose(fp);
+
+    chmod(env->cfglocal,S_IRUSR|S_IWUSR);
+
+    ufu_free_string(env,line);
+
+    sprintf(env->msg,"Finished writing config (%s).",env->cfglocal);
+    ufu_log(env);
+
+  }
+  else {
+
+    sprintf(env->msg,"Unable to open configfile \"%s\" for writing!",env->cfglocal);
+    ufu_log(env);
+
+  }
+
+}
+
+void ufu_show_config(struct s_env *env) {
+
+  int key,col,row,p,r,i;
+  long int min,max,total;
+  char *s;
+  struct s_mark *m;
+  struct s_hist *h;
+
+  WINDOW *w;
+
+  r=(env->rows-18)/2-4;
+  if(r<2) {
+    r=2;
+  }
+  w=ufu_popup(env,env->cols-20,20,10,r,"Program configuration");
+
+  ufu_wclear(env->top);
+  mvwprintw(env->top,0,0,"[%s] Show program configuration",env->nodename);
+  ufu_wrefresh(env->top);
+
+  row=1;
+  col=2;
+
+  ufu_wclear(env->bottom);
+  ufu_wrefresh(env->bottom);
+
+  // ufu_wclear(w);
+  mvwprintw(w,row++,col,"Pid          : %d (%d)",env->pid,env->ppid);
+  mvwprintw(w,row++,col,"User         : %s (%d)",env->uname,env->uid);
+  mvwprintw(w,row++,col,"Group        : %s (%d)",env->gname,env->gid);
+  mvwprintw(w,row++,col,"Rows/Columns : %d/%d",env->rows,env->cols);
+  mvwprintw(w,row++,col,"Ext editor   : %-40s",env->editor);
+  mvwprintw(w,row++,col,"Ext viewer   : %-40s",env->viewer);
+  mvwprintw(w,row++,col,"Global config: %-40s",env->cfgglobal);
+  mvwprintw(w,row++,col,"Local config : %-40s",env->cfglocal);
+  mvwprintw(w,row++,col,"Home dir     : %-40s",env->homedir);
+  mvwprintw(w,row++,col,"Work dir     : %-40s",env->workdir);
+  ufu_wrefresh(w);
+
+  i=0;
+  h=env->hfirst;
+  while(h!=NULL) {
+    i++;
+    h=h->next;
+  }
+
+  if(i>0) {
+    mvwprintw(w,row++,col,"History min  : %d entries min, %d entries max, %d in use",env->history_min,env->history_max,i);
+  }
+  else {
+    mvwprintw(w,row++,col,"History min  : %d entries min, %d entries max",env->history_min,env->history_max);
+  }
+
+  i=0;
+  m=env->mfirst;
+  while(m!=NULL) {
+    i++;
+    m=m->next;
+  }
+
+  if(i>0) {
+    mvwprintw(w,row++,col,"Max to mark  : %d entries, %d in use, %d free",env->max_to_mark,i,env->max_to_mark-i);
+  }
+  else {
+    mvwprintw(w,row++,col,"Max to mark  : %d entries",env->max_to_mark);
+  }
+  mvwprintw(w,row++,col,"Logfile      : %s",env->logname);
+
+  total=(long int)0;
+  min=(long int)env->panel[UFU_MIN_PANEL]->ntotal;
+  max=(long int)env->panel[UFU_MIN_PANEL]->ntotal;
+  p=UFU_MIN_PANEL;
+  while((strlen(env->panel[p]->dirname)>0)&&(p<env->mpanel)) {
+    total=total+env->panel[p]->ntotal;
+    if(env->panel[p]->ntotal<min)
+      min=env->panel[p]->ntotal;
+    if(env->panel[p]->ntotal>max)
+      max=env->panel[p]->ntotal;
+    p++;
+  }
+  p--;
+
+  mvwprintw(w,row++,col,"Panels       : %d of %d total",p+1,env->mpanel+1);
+
+  if(p>0)
+    mvwprintw(w,row++,col,"Entries      : %ld (min %ld,max %ld,avg %ld)",total,min,max,total/p);
+  else
+    mvwprintw(w,row++,col,"Entries      : %ld (min %ld,max %ld)",total,min,max);
+
+  if(env->rb) {
+    mvwprintw(w,row++,col,"Recycle path : %s",env->rb_path);
+    mvwprintw(w,row++,col,"Recycle size : %d MBytes max",env->rb_size);
+  }
+
+  mvwprintw(w,row++,col,"Nodename     : %-40s",env->nodename);
+  mvwprintw(w,row++,col,"Sysname      : %-40s",env->sysname);
+  mvwprintw(w,row++,col,"Release      : %-40s",env->release);
+
+  ufu_wrefresh(w);
+
+  key=ufu_get_key(env,UFU_NO_TEXT,NULL);
+
+  switch(key) {
+
+    case UFU_KEY_QMARK:
+
+      ufu_wclear(env->top);
+      mvwprintw(env->top,0,0,"[%s] Show program configuration (used keys (for your eyes only))",env->nodename);
+      ufu_wrefresh(env->top);
+
+      ufu_wclear(env->bottom);
+      ufu_wrefresh(env->bottom);
+
+      row=1;
+      col=2;
+
+      w=ufu_popup(env,env->cols,21,0,(env->rows-21)/2+1,"Program configuration (screen #2)");
+      ufu_wrefresh(w);
+
+      // ufu_wclear(w);
+
+      mvwprintw(w,row++,col,"Key          Times used");
+      mvwprintw(w,row++,col,"------------ ----------");
+
+      mvwprintw(w,row++,col,"Help         %6d",env->key_help);
+      mvwprintw(w,row++,col,"Up           %6d",env->key_up);
+      mvwprintw(w,row++,col,"Down         %6d",env->key_down);
+      mvwprintw(w,row++,col,"Left         %6d",env->key_left);
+      mvwprintw(w,row++,col,"Right        %6d",env->key_right);
+      mvwprintw(w,row++,col,"Prev page    %6d",env->key_prev_page);
+      mvwprintw(w,row++,col,"Next page    %6d",env->key_next_page);
+      mvwprintw(w,row++,col,"Panel        %6d",env->key_panel);
+      mvwprintw(w,row++,col,"Prev panel   %6d",env->key_prev_panel);
+      mvwprintw(w,row++,col,"Next panel   %6d",env->key_next_panel);
+      mvwprintw(w,row++,col,"Updir        %6d",env->key_dir_up);
+      mvwprintw(w,row++,col,"Homedir      %6d",env->key_dir_home);
+      mvwprintw(w,row++,col,"Workdir      %6d",env->key_dir_work);
+      mvwprintw(w,row++,col,"Prevdir      %6d",env->key_dir_prev);
+      mvwprintw(w,row++,col,"Rootdir      %6d",env->key_dir_root);
+      mvwprintw(w,row++,col,"Go           %6d",env->key_go);
+      mvwprintw(w,row++,col,"Setting      %6d",env->key_setting);
+
+      row=1;
+      col=29;
+
+      mvwprintw(w,row++,col,"Key          Times used");
+      mvwprintw(w,row++,col,"------------ ----------");
+
+      mvwprintw(w,row++,col,"Info         %6d",env->key_info);
+      mvwprintw(w,row++,col,"XInfo        %6d",env->key_xinfo);
+      mvwprintw(w,row++,col,"Config       %6d",env->key_config);
+      mvwprintw(w,row++,col,"Select       %6d",env->key_select);
+      mvwprintw(w,row++,col,"Edit         %6d",env->key_edit);
+      mvwprintw(w,row++,col,"View         %6d",env->key_view);
+      mvwprintw(w,row++,col,"Expunge      %6d",env->key_expunge);
+      mvwprintw(w,row++,col,"Show mark    %6d",env->key_show_mark);
+      mvwprintw(w,row++,col,"Add mark     %6d",env->key_add_mark);
+      mvwprintw(w,row++,col,"Remove mark  %6d",env->key_rem_mark);
+      mvwprintw(w,row++,col,"Add panel    %6d",env->key_add_panel);
+      mvwprintw(w,row++,col,"Remove panel %6d",env->key_rem_panel);
+      mvwprintw(w,row++,col,"Add ucmd     %6d",env->key_add_ucmd);
+      mvwprintw(w,row++,col,"Remove ucmd  %6d",env->key_rem_ucmd);
+      mvwprintw(w,row++,col,"Header       %6d",env->key_header);
+      mvwprintw(w,row++,col,"Sort order   %6d",env->key_sort_order);
+      mvwprintw(w,row++,col,"Sort column  %6d",env->key_sort_col);
+
+      row=1;
+      col=54;
+
+      mvwprintw(w,row++,col,"Key          Times used");
+      mvwprintw(w,row++,col,"------------ ----------");
+
+      mvwprintw(w,row++,col,"Search       %6d",env->key_search);
+      mvwprintw(w,row++,col,"Trash        %6d",env->key_tc);
+
+      ufu_wrefresh(w);
+
+      ufu_any_key(env);
+
+      row=1;
+      col=2;
+
+      w=ufu_popup(env,54,14,(env->cols-54)/2,(env->rows-14)/2,"Program configuration (screen #3)");
+      ufu_wrefresh(w);
+
+      // ufu_wclear(w);
+
+      mvwprintw(w,row++,col,"Key          Times used");
+      mvwprintw(w,row++,col,"------------ ----------");
+
+      mvwprintw(w,row++,col,"Config #1    %6d",env->key_config_1);
+      mvwprintw(w,row++,col,"Config #2    %6d",env->key_config_2);
+      mvwprintw(w,row++,col,"Config #3    %6d",env->key_config_3);
+      mvwprintw(w,row++,col,"Config #4    %6d",env->key_config_4);
+      mvwprintw(w,row++,col,"Config #5    %6d",env->key_config_5);
+      mvwprintw(w,row++,col,"Config #6    %6d",env->key_config_6);
+      mvwprintw(w,row++,col,"Config #7    %6d",env->key_config_7);
+
+      row=1;
+      col=29;
+
+      mvwprintw(w,row++,col,"Key          Times used");
+      mvwprintw(w,row++,col,"------------ ----------");
+
+      mvwprintw(w,row++,col,"Exec ucmd #0 %6d",env->key_ucmd_0);
+      mvwprintw(w,row++,col,"Exec ucmd #1 %6d",env->key_ucmd_1);
+      mvwprintw(w,row++,col,"Exec ucmd #2 %6d",env->key_ucmd_2);
+      mvwprintw(w,row++,col,"Exec ucmd #3 %6d",env->key_ucmd_3);
+      mvwprintw(w,row++,col,"Exec ucmd #4 %6d",env->key_ucmd_4);
+      mvwprintw(w,row++,col,"Exec ucmd #5 %6d",env->key_ucmd_5);
+      mvwprintw(w,row++,col,"Exec ucmd #6 %6d",env->key_ucmd_6);
+      mvwprintw(w,row++,col,"Exec ucmd #7 %6d",env->key_ucmd_7);
+      mvwprintw(w,row++,col,"Exec ucmd #8 %6d",env->key_ucmd_8);
+      mvwprintw(w,row++,col,"Exec ucmd #9 %6d",env->key_ucmd_9);
+
+      ufu_wrefresh(w);
+
+      ufu_any_key(env);
+
+      break;
+
+    case UFU_KEY_EMARK:
+
+      h=env->hfirst;
+      if(h!=NULL) {
+
+        s=ufu_alloc_string(env,60);
+
+        ufu_wclear(env->top);
+        mvwprintw(env->top,0,0,"[%s] Show program history (for your eyes only)",env->nodename);
+        ufu_wrefresh(env->top);
+
+        while(h->next!=NULL) {
+          h=h->next;
+        }
+
+        ufu_wclear(env->bottom);
+        ufu_wrefresh(env->bottom);
+
+        row=1;
+        col=2;
+
+        while(h!=NULL) {
+
+          ufu_wclear(w);
+
+          mvwprintw(w,row++,col,"Part        SeqNo Directory");
+          mvwprintw(w,row++,col,"----------- ----- ----------------------------------------------------------");
+
+          i=0;
+
+          while((h!=NULL)&&(i<(env->rows-8))) {
+
+            switch(h->what) {
+              case UFU_HIST_ENTRY:
+                mvwprintw(w,row,col,"Entry");
+                break;
+              case UFU_HIST_PANEL:
+                mvwprintw(w,row,col,"Panel");
+                break;
+              case UFU_HIST_MARK:
+                mvwprintw(w,row,col,"Mark");
+                break;
+              case UFU_HIST_MARK_ACTION:
+                mvwprintw(w,row,col,"Mark action");
+                break;
+              case UFU_HIST_UCMD:
+                mvwprintw(w,row,col,"Usercmd");
+                break;
+              case UFU_HIST_XINFO:
+                mvwprintw(w,row,col,"XInfo");
+                break;
+              case UFU_HIST_REMOTE:
+                mvwprintw(w,row,col,"Remote");
+                break;
+              case UFU_HIST_SETUP:
+                mvwprintw(w,row,col,"Setup");
+                break;
+              default:
+                mvwprintw(w,row,col,"?");
+                break;
+            }
+
+            ufu_resize_string(env,h->dname,58,s);
+
+            mvwprintw(w,row++,col+12,"%5d %-56s",h->seqno,s);
+            h=h->prev;
+
+            i++;
+
+          }
+
+        }
+
+        ufu_wrefresh(w);
+
+        ufu_any_key(env);
+
+        ufu_free_string(env,s);
+
+      }
+
+      break;
+
+  }
+
+}
+
+void ufu_show_setting(struct s_env *env) {
+
+  int again,changed,key,col,row,menu_min,menu_max,menu_c,i;
+  char *menu[]={
+    "                          Debug",
+    "  Confirmation for quit actions",
+    "  Confirmation for copy actions",
+    "  Confirmation for move actions",
+    "Confirmation for remove actions",
+    "  Query for action confirmation",
+    "                  Ignore errors",
+    "         Include subdirectories",
+    "         Show directories first",
+    "                Use recycle bin"};
+  char *yes="Yes",*no="No!",*r;
+  WINDOW *w;
+
+  menu_min=0;
+  menu_max=8;
+
+  w=ufu_popup(env,40,menu_max+3,(env->cols-40)/2,(env->rows-(menu_max+5))/2,"Program settings");
+  ufu_wrefresh(w);
+
+  r=ufu_alloc_string(env,4);
+
+  menu_c=ufu_find_hist(env,UFU_HIST_SETUP,NULL);
+
+  row=2;
+  col=1;
+
+  again=TRUE;
+  changed=FALSE;
+
+  while(again) {
+
+    for(i=menu_min;i<=menu_max;i++) {
+      if(i==menu_c)  wattron(w,A_REVERSE);
+      strcpy(r,no);
+      switch(i) {
+        case 0:
+          if(env->debug)          strcpy(r,yes);
+          break;
+        case 1:
+          if(env->confirmquit)    strcpy(r,yes);
+          break;
+        case 2:
+          if(env->confirmcopy)    strcpy(r,yes);
+          break;
+        case 3:
+          if(env->confirmmove)    strcpy(r,yes);
+          break;
+        case 4:
+          if(env->confirmremove)  strcpy(r,yes);
+          break;
+        case 5:
+          if(env->confirmaction)  strcpy(r,yes);
+          break;
+        case 6:
+          if(env->ignoreerror)    strcpy(r,yes);
+          break;
+        case 7:
+          if(env->incsubdir)      strcpy(r,yes);
+          break;
+        case 8:
+          if(env->dirfirst)       strcpy(r,yes);
+          break;
+        case 9:
+          if(env->rb)             strcpy(r,yes);
+          break;
+      }
+      mvwprintw(w,i+1,col," %s? %s ",menu[i],r);
+      if(i==menu_c)  wattroff(w,A_REVERSE);
+
+    }
+
+    ufu_wrefresh(w);
+
+    key=ufu_get_key(env,UFU_NO_TEXT,NULL);
+
+    switch(key) {
+
+      case UFU_KEY_QUIT:
+        again=FALSE;
+        ufu_add_hist(env,UFU_HIST_SETUP,NULL,menu_c);
+        if(changed)  ufu_write_config(env);
+        break;
+
+      case UFU_KEY_SELECT:
+      case UFU_KEY_ENTER:
+      case UFU_KEY_LEFT:
+      case UFU_KEY_RIGHT:
+      case UFU_KEY_MARK:
+        switch(menu_c) {
+          case 0:
+            env->debug=!env->debug;
+            break;
+          case 1:
+            env->confirmquit=!env->confirmquit;
+            break;
+          case 2:
+            env->confirmcopy=!env->confirmcopy;
+            break;
+          case 3:
+            env->confirmmove=!env->confirmmove;
+            break;
+          case 4:
+            env->confirmremove=!env->confirmremove;
+            break;
+          case 5:
+            env->confirmaction=!env->confirmaction;
+            break;
+          case 6:
+            env->ignoreerror=!env->ignoreerror;
+            break;
+          case 7:
+            env->incsubdir=!env->incsubdir;
+            break;
+          case 8:
+            env->dirfirst=!env->dirfirst;
+            break;
+          case 9:
+            env->rb=!env->rb;
+            break;
+        }
+        changed=TRUE;
+        break;
+
+      case UFU_KEY_UP:
+        if(menu_c>menu_min)
+          menu_c--;
+        else
+          menu_c=menu_max;
+        break;
+
+      case UFU_KEY_DOWN:
+        if(menu_c<menu_max)
+          menu_c++;
+        else
+          menu_c=menu_min;
+        break;
+
+      default:
+        ufu_wrong_key(env);
+        break;
+
+    }
+
+  }
+
+  ufu_free_string(env,r);
+
+  ufu_popdown(env,w);
+  ufu_wrefresh(env->body);
+
+}
+
+void ufu_findext(struct s_env *env,char *file,char *s) {
+
+  FILE *fp;
+  int found;
+  char *path,*subs,*bin;
+
+  if(strlen(s)==0) {
+
+    path=ufu_alloc_string(env,strlen(env->path)+1);
+    strcpy(path,env->path);
+
+    sprintf(env->msg,"Searching PATH -> Looking for binary '%s'",file);
+    ufu_log(env);
+
+    found=FALSE;
+    subs=strtok(path,":");
+
+    while((!found)&&(subs!=NULL)) {
+
+      sprintf(env->msg," PATH: %s",subs);
+      ufu_log(env);
+
+      bin=ufu_alloc_string(env,strlen(subs)+strlen(file)+3);
+      strcpy(bin,subs);
+      strcat(bin,"/");
+      strcat(bin,file);
+
+      found=((fp=fopen(bin,"r"))!=NULL);
+      if(found) {
+        fclose(fp);
+        strcpy(s,bin);
+      }
+
+      ufu_free_string(env,bin);
+
+      subs=strtok(NULL,":");
+
+    }
+
+    if(strlen(s)>0) {
+
+      sprintf(env->msg,"Searching PATH -> Found: %s",s);
+      ufu_log(env);
+
+    }
+    else {
+
+      sprintf(env->msg,"Searching PATH -> Not found!");
+      ufu_log(env);
+
+    }
+
+    ufu_free_string(env,path);
+
+  }
+
+}
+
