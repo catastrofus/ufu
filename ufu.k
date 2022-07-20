@@ -15,7 +15,7 @@
 #define	UFU_KEY_ENTER		KEY_ENTER
 #define	UFU_KEY_BACKSPACE	KEY_BACKSPACE
 #define	UFU_KEY_CTRL_H		0x7F
-#define	UFU_KEY_NOP			'_'
+#define	UFU_KEY_NOP		'_'
 #define	UFU_KEY_EMARK		'!'
 #define	UFU_KEY_QMARK		'?'
 #define	UFU_KEY_QUIT		'q'

@@ -2,282 +2,386 @@
 #include "ufu.h"
 #include "ufu.p"
 
-void ufu_help(struct s_env *env,int panel,int function) {
+void ufu_help(struct s_env *env,int panel,int tag) {
 
-  int row,col;
-  WINDOW *w;
+  int found,again,redraw,offset;
+  int key,i,pos,len_txt,row,rows;
+  int seq_tos,seq_bos;
+  struct s_hlptag *a;
+  struct s_hlptxt *x,*cos,*tos,*t;
 
   strcpy(env->fun,"ufu_help");
   ufu_wai(env);
 
-  row=1;
-  col=9;
+  sprintf(env->msg,"Looking for tag %d.",tag);
+  ufu_log(env);
 
-  ufu_wclear(env->top);
-  ufu_wrefresh(env->top);
+  if(env->tagfirst!=NULL) {
 
-  ufu_wclear(env->bottom);
-  ufu_wrefresh(env->bottom);
-
-  w=ufu_popup(env,env->cols,env->rows-4,col-9,row+1,"HELP");
-
-  switch(function) {
-
-    case UFU_HELP_MAIN:
-      mvwprintw(env->top,0,0,"[%s] Help for main window",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit UFU.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous entry.");
-      mvwprintw(w,row++,col," <dn>   - To next entry.");
-      mvwprintw(w,row++,col,"   %c    - Scroll up.",UFU_KEY_SCROLL_UP);
-      mvwprintw(w,row++,col,"   %c    - Scroll down.",UFU_KEY_SCROLL_DOWN);
-      mvwprintw(w,row++,col,"   %c    - To previous page of entries.",UFU_KEY_PREVPAGE);
-      mvwprintw(w,row++,col,"   %c    - To next page of entries.",UFU_KEY_NEXTPAGE);
-      mvwprintw(w,row++,col,"   %c    - To first entry.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To next entry.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Switch current panel #%d to \"%s\".",UFU_KEY_DIRHOME,panel,env->homedir);
-      mvwprintw(w,row++,col,"   %c    - Switch current panel #%d to \"%s\".",UFU_KEY_DIRWORK,panel,env->workdir);
-      mvwprintw(w,row++,col,"   %c    - Switch current panel #%d to \"/\".",UFU_KEY_DIRROOT,panel);
-      if(strlen(env->panel[panel]->dirnameprev)>0) {
-        mvwprintw(w,row++,col,"   %c    - Switch current panel #%d to \"%s\".",UFU_KEY_PREVDIR,panel,env->panel[panel]->dirnameprev);
+    // Find tag.
+    found=FALSE;
+    a=env->tagfirst;
+    while((a!=NULL)&&(!found)) {
+      found=((a->tag)==tag);
+      if(!found) {
+        a=a->next;
       }
-      mvwprintw(w,row++,col,"   %c    - Switch header.",UFU_KEY_HEADER);
-      mvwprintw(w,row++,col,"   %c    - Switch sort column.",UFU_KEY_SORT_COL);
-      mvwprintw(w,row++,col,"   %c    - Switch sort order.",UFU_KEY_SORT_ORDER);
-      mvwprintw(w,row++,col," <rt>   - To next panel.");
-      mvwprintw(w,row++,col," <lt>   - To previous panel.");
-      mvwprintw(w,row++,col," <TB>   - Select panel.");
-      if(env->rows<=24) {
-        ufu_wrefresh(w);
-        ufu_wrefresh(env->top);
-        ufu_any_key(env);
-        ufu_popdown(env,w);
-        row=1;
-        col=9;
-        w=ufu_popup(env,env->cols,env->rows-4,col-9,row+1,"HELP");
-        row=1;
-        mvwprintw(env->top,0,0,"[%s] Help for main window",env->nodename);
-        ufu_wrefresh(env->top);
+    }
+    if(found) {
+
+      sprintf(env->msg,"Found tag %d.",tag);
+      ufu_log(env);
+
+      // Txt available?
+      if(a->fhlptxt!=NULL) {
+
+        sprintf(env->msg,"Found txt for tag %d.",tag);
+        ufu_log(env);
+
+        x=a->fhlptxt;
+	offset=0;
+
+        tos=x;
+        cos=x;
+
+        t=x;
+
+        rows=env->rows-6;
+
+        redraw=TRUE;
+        again=(x!=NULL);
+
+        while(again) {
+
+          if(redraw) {
+
+            ufu_wclear(env->top);
+            mvwprintw(env->top,0,0,"[%s] %s",env->nodename,a->txt);
+            if(offset>0) {
+              mvwprintw(env->top,0,env->cols-12,"Offset: %d",offset);
+            }
+
+            ufu_wrefresh(env->top);
+
+            ufu_wclear(env->bottom);
+            ufu_wrefresh(env->bottom);
+
+            ufu_wclear(env->body);
+            ufu_wrefresh(env->body);
+
+            pos=0;
+
+          }
+
+          t=tos;
+          row=0;
+
+          while(row<=rows) {
+
+            if(t!=NULL) {
+
+              if(t==cos)  wattron(env->body,A_REVERSE);
+
+              pos=0;
+
+              // Text.
+              if(strlen(t->txt)<(env->cols-pos)) {
+                if(offset<(strlen(t->txt)-1)) {
+                  mvwprintw(env->body,row,pos+1,"%s",t->txt+offset);
+                  for(i=pos-offset+strlen(t->txt)+1;i<(env->cols-1);i++) {
+                    mvwprintw(env->body,row,i," ");
+                  }
+                }
+              }
+              else {
+                if(t==cos)  wattroff(env->body,A_REVERSE);
+                mvwprintw(env->body,row,pos,"!");
+                if(t==cos)  wattron(env->body,A_REVERSE);
+                if(offset<(strlen(t->txt)-1)) {
+                  for(i=pos+1;i<(env->cols-1);i++) {
+                    mvwprintw(env->body,row,i,"%c",t->txt[i-pos-1+offset]);
+                  }
+                }
+              }
+
+              if(t==cos)  wattroff(env->body,A_REVERSE);
+
+              t=t->next;
+
+            }
+
+            row++;
+
+          }
+
+          ufu_wrefresh(env->body);
+
+          key=ufu_get_key(env,UFU_NO_TEXT,NULL);
+
+          switch(key) {
+
+            case UFU_KEY_QUIT:
+            case UFU_KEY_MARK:
+              again=FALSE;
+              break;
+
+            case UFU_KEY_LEFT:
+              env->key_left++;
+              if(offset>0) {
+                offset--;
+              }
+              break;
+
+            case UFU_KEY_RIGHT:
+              env->key_right++;
+              if(offset<(len_txt-1)) {
+                offset++;
+              }
+              break;
+
+            case UFU_KEY_DOWN:
+              env->key_down++;
+              if(cos->next!=NULL) {
+                seq_tos=tos->seqno;
+                seq_bos=seq_tos+rows-1;
+                cos=cos->next;
+                if(cos->seqno>seq_bos) {
+                  tos=cos;
+                }
+              }
+              break;
+
+            case UFU_KEY_UP:
+              env->key_up++;
+              if(cos->prev!=NULL) {
+                seq_tos=tos->seqno;
+                seq_bos=seq_tos+rows-1;
+                cos=cos->prev;
+                if(cos->seqno<seq_tos) {
+                  i=0;
+                  while((i<rows)&&(tos->prev!=NULL)) {
+                    tos=tos->prev;
+                    i++;
+                  }
+                }
+              }
+              break;
+
+            case UFU_KEY_FIRST:
+            case UFU_KEY_HOME:
+              env->key_first++;
+              tos=a->fhlptxt;
+              cos=a->fhlptxt;
+              break;
+
+            case UFU_KEY_LAST:
+            case UFU_KEY_END:
+              env->key_last++;
+              while(cos->next!=NULL) {
+                cos=cos->next;
+              }
+              tos=cos;
+              i=0;
+              while((i<(rows-1))&&(tos->prev!=NULL)) {
+                tos=tos->prev;
+                i++;
+              }
+              break;
+
+            case KEY_NPAGE:
+            case UFU_KEY_NEXTPAGE:
+              env->key_next_page++;
+              i=0;
+              while((i<rows)&&(tos->next!=NULL)) {
+                tos=tos->next;
+                i++;
+              }
+              cos=tos;
+              break;
+
+            case KEY_PPAGE:
+            case UFU_KEY_PREVPAGE:
+              env->key_prev_page++;
+              i=0;
+              while((i<rows)&&(tos->prev!=NULL)) {
+                tos=tos->prev;
+                i++;
+              }
+              cos=tos;
+              break;
+
+            case UFU_KEY_SETTING:
+            case UFU_KEY_F3:
+              env->key_setting++;
+              ufu_show_setting(env);
+              redraw=TRUE;
+              break;
+
+            default:
+              ufu_wrong_key(env);
+              break;
+
+          }
+
+        }
+
       }
-      mvwprintw(w,row++,col,"   %c    - To remote entries.",UFU_KEY_REMOTE);
-      mvwprintw(w,row++,col,"   %c    - To marked entries.",UFU_KEY_MARKED);
-      mvwprintw(w,row++,col,"<space> - Mark/Unmark entry.");
-      mvwprintw(w,row++,col,"   %c    - Mark all entries.",UFU_KEY_APPEND);
-      mvwprintw(w,row++,col,"   %c    - Show marked entries.",UFU_KEY_MARKED);
-      mvwprintw(w,row++,col,"<enter> - Select.");
-      mvwprintw(w,row++,col,"   %c    - User commands.",UFU_KEY_UCMD);
-      mvwprintw(w,row++,col,"   %c    - Configuration.",UFU_KEY_CONFIG);
-      mvwprintw(w,row++,col,"   %c    - Settings.",UFU_KEY_SETTING);
-      mvwprintw(w,row++,col,"   %c    - Info.",UFU_KEY_INFO);
-      mvwprintw(w,row++,col,"   %c    - View file.",UFU_KEY_VIEW);
-      mvwprintw(w,row++,col,"   %c    - Edit file.",UFU_KEY_EDIT);
-      mvwprintw(w,row++,col,"   %c    - Go to seqno.",UFU_KEY_GO);
-      mvwprintw(w,row++,col,"   %c    - View users.",UFU_KEY_PLUS);
-      mvwprintw(w,row++,col,"   %c    - View groups.",UFU_KEY_MINUS);
-      mvwprintw(w,row++,col,"   %c    - View messages.",UFU_KEY__);
-      mvwprintw(w,row++,col,"   %c    - Search pattern.",UFU_KEY_SEARCH);
-      mvwprintw(w,row++,col,"   %c    - View logfile \"%s\".",UFU_KEY_LOG,env->logname);
-      break;
-
-    case UFU_HELP_PANEL:
-      mvwprintw(env->top,0,0,"[%s] Help for select panel window",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit panel.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous panel.");
-      mvwprintw(w,row++,col," <dn>   - To next panel.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of panels.");
-      mvwprintw(w,row++,col," <np>   - To next page of panels.");
-      mvwprintw(w,row++,col,"   %c    - To first panel.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To last panel.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Add new panel.",UFU_KEY_APPEND);
-      mvwprintw(w,row++,col,"   %c    - Delete panel.",UFU_KEY_ERASE);
-      mvwprintw(w,row++,col,"   %c    - Info panel.",UFU_KEY_INFO);
-      mvwprintw(w,row++,col,"   %c    - To remote entries.",UFU_KEY_REMOTE);
-      mvwprintw(w,row++,col,"<space> - Mark/Unmark panel.");
-      mvwprintw(w,row++,col,"<enter> - Select.");
-      mvwprintw(w,row++,col,"   %c    - View logfile \"%s\".",UFU_KEY_LOG,env->logname);
-      break;
-
-    case UFU_HELP_TC:
-      mvwprintw(env->top,0,0,"[%s] Help for trash window",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit trashcan.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous trash.");
-      mvwprintw(w,row++,col," <dn>   - To next trash.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of trash.");
-      mvwprintw(w,row++,col," <np>   - To next page of trash.");
-      mvwprintw(w,row++,col,"   %c    - To first trash.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To last trash.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - View logfile \"%s\".",UFU_KEY_LOG,env->logname);
-      break;
-
-    case UFU_HELP_XINFO:
-      mvwprintw(env->top,0,0,"[%s] Help for xinfo window",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit xinfo.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous entry.");
-      mvwprintw(w,row++,col," <dn>   - To next entry.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of entries.");
-      mvwprintw(w,row++,col," <np>   - To next page of entries.");
-      mvwprintw(w,row++,col,"   %c    - To first entry.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To last panel.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Info entry.",UFU_KEY_INFO);
-      mvwprintw(w,row++,col,"<enter> - Info entry.");
-      break;
-
-    case UFU_HELP_ID:
-    case UFU_HELP_SELECT_ACTION:
-    case UFU_HELP_SELECT_PANEL:
-    case UFU_HELP_SELECT_PATH:
-      mvwprintw(env->top,0,0,"[%s] Help for select window",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous line.");
-      mvwprintw(w,row++,col," <dn>   - To next line.");
-      mvwprintw(w,row++,col,"   %c    - To first line.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To last line.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"<enter> - Select.");
-      break;
-
-    case UFU_HELP_CONFIG:
-      mvwprintw(env->top,0,0,"[%s] Help for program configuration",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col,"   %c    - Show standard key hit ratio.",UFU_KEY_1);
-      mvwprintw(w,row++,col,"   %c    - Show usercommand key hit ratio.",UFU_KEY_2);
-      mvwprintw(w,row++,col,"   %c    - Show history key hit ratio.",UFU_KEY_3);
-      break;
-
-    case UFU_HELP_MARK:
-      mvwprintw(env->top,0,0,"[%s] Help for marked entries",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit marked entries.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous marked entry.");
-      mvwprintw(w,row++,col," <dn>   - To next marked entry.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of marked entries.");
-      mvwprintw(w,row++,col," <np>   - To next page of marked entries.");
-      mvwprintw(w,row++,col,"   %c    - To first set of marked entries.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To next set of marked entries.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Info entry.",UFU_KEY_INFO);
-      mvwprintw(w,row++,col,"   %c    - Configuration.",UFU_KEY_CONFIG);
-      mvwprintw(w,row++,col,"   %c    - Settings.",UFU_KEY_SETTING);
-      mvwprintw(w,row++,col,"<space> - Unmark entry.");
-      mvwprintw(w,row++,col,"   %c    - Search marked entries.",UFU_KEY_SEARCH);
-      mvwprintw(w,row++,col,"   %c    - Expunge marked entries.",UFU_KEY_EXPUNGE);
-      mvwprintw(w,row++,col,"   %c    - View file.",UFU_KEY_VIEW);
-      mvwprintw(w,row++,col,"   %c    - Edit file.",UFU_KEY_EDIT);
-      mvwprintw(w,row++,col,"   %c    - View logfile \"%s\".",UFU_KEY_LOG,env->logname);
-      mvwprintw(w,row++,col,"   %c    - Actions!",UFU_KEY_MARK_ACTION);
-      break;
-
-    case UFU_HELP_REMOTE:
-      mvwprintw(env->top,0,0,"[%s] Help for remote entries",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit remote entries.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous remote entry.");
-      mvwprintw(w,row++,col," <dn>   - To next remote entry.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of remote entries.");
-      mvwprintw(w,row++,col," <np>   - To next page of remote entries.");
-      mvwprintw(w,row++,col,"   %c    - To first set of remote entries.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To next set of remote entries.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Connect to remote entry.",UFU_KEY_CONNECT);
-      mvwprintw(w,row++,col,"   %c    - Edit remote entry.",UFU_KEY_EDIT);
-      mvwprintw(w,row++,col,"   %c    - Add remote entry.",UFU_KEY_APPEND);
-      mvwprintw(w,row++,col,"   %c    - Remove remote entry.",UFU_KEY_ERASE);
-      mvwprintw(w,row++,col,"   %c    - Enter password.",UFU_KEY_CLEAR);
-
-      break;
-
-    case UFU_HELP_UCMD:
-      mvwprintw(env->top,0,0,"[%s] Help for usercommands",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit usercommands.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous usercommand.");
-      mvwprintw(w,row++,col," <dn>   - To next usercommand.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of usercommands.");
-      mvwprintw(w,row++,col," <np>   - To next page of usercommands.");
-      mvwprintw(w,row++,col,"   %c    - To first set of usercommands.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To next set of usercommands.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Info usercommand.",UFU_KEY_INFO);
-      mvwprintw(w,row++,col,"   %c    - Edit usercommand.",UFU_KEY_EDIT);
-      mvwprintw(w,row++,col,"   %c    - Add usercommand.",UFU_KEY_APPEND);
-      mvwprintw(w,row++,col,"   %c    - Remove usercommand.",UFU_KEY_ERASE);
-      mvwprintw(w,row++,col,"<enter> - Execute usercommand.");
-      mvwprintw(w,row++,col,"");
-      mvwprintw(w,row++,col-6,"Substitutions - {A} will be replaced by the absolute filename.");
-      mvwprintw(w,row++,col-6,"              - {R} will be replaced by the relative filename.");
-      mvwprintw(w,row++,col-6,"              - {B} will be replaced by the basename.");
-      break;
-
-    case UFU_HELP_U:
-      mvwprintw(env->top,0,0,"[%s] Help for viewing users",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit view.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous user.");
-      mvwprintw(w,row++,col," <dn>   - To next user.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of users.");
-      mvwprintw(w,row++,col," <np>   - To next page of users.");
-      mvwprintw(w,row++,col,"   %c    - To first set of users.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To last set of users.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Show directory/shell.",UFU_KEY_1);
-      mvwprintw(w,row++,col,"   %c    - Show secondary groups.",UFU_KEY_2);
-      mvwprintw(w,row++,col,"   %c    - Switch sort between uid & username.",UFU_KEY_0);
-      mvwprintw(w,row++,col," <left> - Shift secondary groups to the left.");
-      mvwprintw(w,row++,col,"<right> - Shift secondary groups to the right.");
-      break;
-
-    case UFU_HELP_G:
-      mvwprintw(env->top,0,0,"[%s] Help for viewing users",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit view.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous user.");
-      mvwprintw(w,row++,col," <dn>   - To next user.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of users.");
-      mvwprintw(w,row++,col," <np>   - To next page of users.");
-      mvwprintw(w,row++,col,"   %c    - To first set of users.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To last set of users.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Switch sort between gid & groupname.",UFU_KEY_0);
-      mvwprintw(w,row++,col," <left> - Shift users to the left.");
-      mvwprintw(w,row++,col,"<right> - Shift users to the right.");
-      break;
-
-    case UFU_HELP_LOG:
-      mvwprintw(env->top,0,0,"[%s] Help for viewing log",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit view.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <up>   - To previous line.");
-      mvwprintw(w,row++,col," <dn>   - To next line.");
-      mvwprintw(w,row++,col," <pp>   - To previous page of lines.");
-      mvwprintw(w,row++,col," <np>   - To next page of lines.");
-      mvwprintw(w,row++,col,"   %c    - To first set of lines.",UFU_KEY_FIRST);
-      mvwprintw(w,row++,col,"   %c    - To last set of lines.",UFU_KEY_LAST);
-      mvwprintw(w,row++,col,"   %c    - Toggle seqno on/off.",UFU_KEY_1);
-      mvwprintw(w,row++,col,"   %c    - Toggle timestamp on/off.",UFU_KEY_2);
-      mvwprintw(w,row++,col,"   %c    - Forward search.",UFU_KEY_SCROLL_DOWN);
-      mvwprintw(w,row++,col,"   %c    - Backward search.",UFU_KEY_SCROLL_UP);
-      mvwprintw(w,row++,col," <left> - Shift text to the left.");
-      mvwprintw(w,row++,col,"<right> - Shift text to the right.");
-      break;
-
-    case UFU_HELP_RL:
-      mvwprintw(env->top,0,0,"[%s] Help for input",env->nodename);
-      mvwprintw(w,row++,col,"   %c    - Quit input.",UFU_KEY_QUIT);
-      mvwprintw(w,row++,col," <pp>   - To previous word.");
-      mvwprintw(w,row++,col,"   b    - To previous word.");
-      mvwprintw(w,row++,col," <np>   - To next word.");
-      mvwprintw(w,row++,col,"   w    - To next word.");
-      mvwprintw(w,row++,col,"<bspace>- Delete character before cursor.");
-      mvwprintw(w,row++,col,"   i    - Insert mode on.");
-      mvwprintw(w,row++,col," <enter>- Insert mode off.");
-      mvwprintw(w,row++,col,"   x    - Delete character under cursor.");
-      mvwprintw(w,row++,col,"   D    - Delete to end of line.");
-      mvwprintw(w,row++,col,"   d    - Delete to beginning of line.");
-      mvwprintw(w,row++,col," <left> - Character left.");
-      mvwprintw(w,row++,col," <right>- Character right.");
-      break;
-
-    default:
-      mvwprintw(env->top,0,0,"[%s] Help!",env->nodename);
-      mvwprintw(w,4,(env->cols-34)/2,"No help defined for this function!");
-      break;
-
+      else {
+        sprintf(env->msg,"No txt found for tag %d!",tag);
+        ufu_log(env);
+      }
+    }
+    else {
+      sprintf(env->msg,"Tag %d NOT found!",tag);
+      ufu_log(env);
+    }
   }
 
-  ufu_wrefresh(w);
-  ufu_wrefresh(env->top);
+}
 
-  ufu_popdown(env,w);
-  ufu_wrefresh(env->body);
+void ufu_read_hlp(struct s_env *env) {
 
-  ufu_any_key(env);
+  int tag,found,seqno_tag,seqno_txt;
+  char th,*txt,*line1,*line2;
+  FILE *fp;
+  struct s_hlptag *a,*b;
+  struct s_hlptxt *x;
+
+  strcpy(env->fun,"ufu_read_hlp");
+  ufu_wai(env);
+
+  if((fp=fopen(UFU_GLOBAL_HELP,"r"))!=NULL) {
+
+    sprintf(env->msg,"Cleaning structures");
+    ufu_log(env);
+
+    a=env->tagfirst;
+    while(a!=NULL) {
+      b=a->next;
+      ufu_free_hlptag(env,a);
+      a=b;
+    }
+    env->tagfirst=NULL;
+
+    sprintf(env->msg,"Reading helpfile (%s).",UFU_GLOBAL_HELP);
+    ufu_log(env);
+
+    seqno_tag=0;
+    seqno_txt=0;
+
+    line1=ufu_alloc_string(env,UFU_LEN_MSG);
+
+    while(fgets(line1,UFU_LEN_MSG,fp)!=NULL) {
+
+      if((line1[0]!='#')&&(line1[0]!='\n')) {
+
+        line2=strtok(line1,":");
+
+        tag=atoi(line2);
+
+        line2=strtok(NULL,":");
+        th=line2[0];
+
+        txt=strtok(NULL,":");
+	txt[strlen(txt)-1]='\0';
+
+        switch(th) {
+          case 't':
+            sprintf(env->msg," Found tag '%d' (%s)(%d)",tag,txt,seqno_tag);
+	    ufu_log(env);
+            a=env->tagfirst;
+            if(a!=NULL) {
+	      while(a->next!=NULL) {
+	        a=a->next;
+	      }
+	      a->next=ufu_alloc_hlptag(env,strlen(txt)+2);
+	      a->next->seqno=seqno_tag++;
+	      a->next->tag=tag;
+	      strcpy(a->next->txt,txt);
+	      a->next->prev=a;
+            }
+            else {
+	      a=ufu_alloc_hlptag(env,strlen(txt)+2);
+	      a->seqno=seqno_tag++;
+	      a->tag=tag;
+	      strcpy(a->txt,txt);
+	      env->tagfirst=a;
+            }
+            break;
+	  case 'h':
+            sprintf(env->msg,"  Found text \"%s\" (%d)(%d)",txt,tag,seqno_txt);
+	    ufu_log(env);
+            found=FALSE;
+            a=env->tagfirst;
+            if(a!=NULL) {
+	      while((a!=NULL)&&(!found)) {
+	        found=((a->tag)==tag);
+		if(!found) {
+		  a=a->next;
+		}
+	      }
+              if(found) {
+                x=a->fhlptxt;
+	        if(x!=NULL) {
+                  while(x->next!=NULL) {
+                    x=x->next;
+		  }
+                  x->next=ufu_alloc_hlptxt(env,strlen(txt)+2);
+		  x->next->seqno=seqno_txt++;
+		  strcpy(x->next->txt,txt);
+		  x->next->prev=x;
+                }
+	        else {
+                  x=ufu_alloc_hlptxt(env,strlen(txt)+2);
+		  x->seqno=seqno_txt++;
+		  strcpy(x->txt,txt);
+		  a->fhlptxt=x;
+                }
+              }
+            }
+	    break;
+	  default:
+	    sprintf(env->msg,"Huh? No 't' or 'h'?");
+	    ufu_log(env);
+	    break;
+        }
+      }
+      else {
+        line1[strlen(line1)-1]='\0';
+        sprintf(env->msg,"  Skipping line \"%s\".",line1);
+        ufu_log(env);
+      }
+    }
+
+    ufu_free_string(env,line1);
+
+    fclose(fp);
+
+    sprintf(env->msg,"Reading helpfile finished.");
+    ufu_log(env);
+
+    sprintf(env->msg,"Summary helpfile:");
+    ufu_log(env);
+    a=env->tagfirst;
+    while(a!=NULL) {
+      sprintf(env->msg,"Tag %d: %s",a->tag,a->txt);
+      ufu_log(env);
+      x=a->fhlptxt;
+      while(x!=NULL) {
+	sprintf(env->msg,"Tag %d, seqno %d: %s",a->tag,x->seqno,x->txt);
+	ufu_log(env);
+	x=x->next;
+      }
+      a=a->next;
+    }
+
+  }
+  else {
+
+    sprintf(env->msg,"Unable to open help \"%s\"!",UFU_GLOBAL_HELP);
+    ufu_log(env);
+
+  }
 
 }
 

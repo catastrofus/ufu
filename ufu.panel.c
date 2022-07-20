@@ -420,7 +420,7 @@ int ufu_show_panels(struct s_env *env,int panel) {
         break;
 
       case UFU_KEY_REMOTE:
-        ufu_show_remote(env,NULL);
+        ufu_show_remote(env,FALSE);
         redraw=TRUE;
         // Recount panels.
         p=UFU_MIN_PANEL;

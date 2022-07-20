@@ -128,7 +128,7 @@ int ufu_mark(struct s_env *env,int panel,char *dname,struct s_entry *entry) {
   char *abs_name;
 
   struct s_entry *e;
-  struct s_mark *m,*m1,*m2;
+  struct s_mark *m,*m2;
   struct dirent *de;
 
   DIR *dirp;
@@ -714,7 +714,7 @@ void ufu_show_mark(struct s_env *env) {
         sprintf(env->msg,"%s, enter your seqno:",env->master);
         ufu_msg(env);
         ufu_clear_string(env,inp,6);
-        ufu_rl(env,env->bottom,strlen(env->msg)+1,0,TRUE,5,5,inp,TRUE,FALSE);
+        ufu_rl2(env,env->bottom,strlen(env->msg)+1,0,5,TRUE,inp);
         lineno=atoi(inp);
 
         env->m_cos=cos;
@@ -757,7 +757,7 @@ void ufu_show_mark(struct s_env *env) {
         len=env->cols-strlen(env->msg)-1;
         inp=ufu_alloc_string(env,len);
         ufu_clear_string(env,inp,len);
-        ufu_rl(env,env->bottom,strlen(env->msg)+1,0,TRUE,len-1,len-1,inp,TRUE,FALSE);
+        ufu_rl2(env,env->bottom,strlen(env->msg)+1,0,len-1,TRUE,inp);
 
         env->m_cos=cos;
         env->m_tos=tos;

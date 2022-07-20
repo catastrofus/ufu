@@ -51,6 +51,7 @@ int ufu_search_log(struct s_env *,int,char *,struct s_log *);
 int ufu_read_config(struct s_env *,int,char *,int,char **);
 void ufu_write_config(struct s_env *);
 void ufu_show_setting(struct s_env *);
+int ufu_show_config_add(struct s_env *,int,int,char *);
 void ufu_show_config(struct s_env *);
 void ufu_findext(struct s_env *,char *,char *);
 
@@ -91,15 +92,13 @@ void ufu_show_txt(struct s_env *,int,char *);
 void ufu_write_ucmd(struct s_env *);
 void ufu_renum_ucmd(struct s_env *);
 
-int ufu_split_remote(struct s_env *,struct s_remote *,char *,int);
-int ufu_edit_remote(struct s_env *,struct s_remote *,int);
-void ufu_add_remote(struct s_env *,struct s_remote *,int);
+struct s_remote *ufu_show_remote(struct s_env *,int);
+int ufu_add_remote(struct s_env *,struct s_remote *);
 int ufu_rem_remote(struct s_env *,struct s_remote *);
 void ufu_free_remote_hosts(struct s_env *);
-void ufu_show_remote(struct s_env *,char *);
-void ufu_set_pwd(struct s_env *,struct s_remote *);
 
 void ufu_main(struct s_env *);
+void ufu_read_help(struct s_env *);
 void ufu_help(struct s_env *,int,int);
 
 void ufu_init_curses(struct s_env *);
@@ -118,6 +117,8 @@ struct s_usr *ufu_alloc_usr(struct s_env *);
 struct s_grp *ufu_alloc_grp(struct s_env *);
 struct s_grpusr *ufu_alloc_grpusr(struct s_env *);
 struct s_msg *ufu_alloc_msg(struct s_env *);
+struct s_hlptag *ufu_alloc_hlptag(struct s_env *,int);
+struct s_hlptxt *ufu_alloc_hlptxt(struct s_env *,int);
 struct s_log *ufu_alloc_log(struct s_env *,int);
 struct s_txt *ufu_alloc_txt(struct s_env *);
 struct s_mark *ufu_alloc_mark(struct s_env *);
@@ -142,6 +143,8 @@ void ufu_free_usr(struct s_env *,struct s_usr *);
 void ufu_free_grp(struct s_env *,struct s_grp *);
 void ufu_free_grpusr(struct s_env *,struct s_grpusr *);
 void ufu_free_msg(struct s_env *,struct s_msg *);
+void ufu_free_hlptag(struct s_env *,struct s_hlptag *);
+void ufu_free_hlptxt(struct s_env *,struct s_hlptxt *);
 void ufu_free_log(struct s_env *,struct s_log *);
 void ufu_free_txt(struct s_env *,struct s_txt *);
 void ufu_free_mark(struct s_env *,struct s_mark *);
@@ -190,13 +193,13 @@ void ufu_show_msg(struct s_env *);
 void ufu_sort_msg(struct s_env *);
 char *ufu_find_msg(struct s_env *,char *); 
 
+void ufu_read_hlp(struct s_env *);
+
 void ufu_show_tc(struct s_env *);
 int ufu_read_tc(struct s_env *);
 int ufu_write_tc(struct s_env *);
 
-int ufu_rl(struct s_env *,WINDOW *,int,int,int,int,int,char *,int,int);
-int ufu_rl_insert(struct s_env *,char *,char,int,int);
-int ufu_rl_delete(struct s_env *,char *,int);
+char *ufu_rl2(struct s_env *,WINDOW *,int,int,int,int,char *);
 
 void ufu_split_buffer(struct s_env *);
 int ufu_receive_buffer(struct s_env *,unsigned int);

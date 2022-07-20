@@ -74,8 +74,7 @@ void ufu_presort(struct s_env *env,int panel) {
 
   int seqno,found;
   int seqno_f,seqno_l,seqno_df,seqno_dl,seqno_rf,seqno_rl;
-  char *s;
-  struct s_entry *e,*e1,*e2,*e1p,*e1n,*e2p,*e2n;
+  struct s_entry *e,*e1,*e2;
 
   strcpy(env->fun,"ufu_presort");
   ufu_wai(env);
@@ -226,7 +225,7 @@ ufu_log(env);
 
 void ufu_bubblesort(struct s_env *env,int panel,int seqno_f,int seqno_l,int is_dir) {
 
-  int i,j,done;
+  int done;
   struct s_entry *e,*e1,*e2,*e_f,*e_l;
 
   strcpy(env->fun,"ufu_bubblesort");

@@ -639,7 +639,7 @@ int ufu_mark_xcheck(struct s_env *env) {
     if((found==UFU_X_F_NC)||(found==UFU_X_NF)) {
 
       sprintf(s2,"%s@%s",username,nodename);
-      ufu_show_remote(env,s2);
+      ufu_show_remote(env,FALSE);
 
       found=ufu_mark_xcheck_panel(env,m,username,nodename);
 

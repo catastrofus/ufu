@@ -4,7 +4,7 @@
 
 void ufu_show_u(struct s_env *env) {
 
-  int rem,again,found,redraw,key,len,row,col,rows,seqno,seq_tos,seq_bos,i,r;
+  int again,found,redraw,key,row,rows,seqno,seq_tos,seq_bos,i,r;
   int header,len_uname,len_gname,len_dir,len_sh,len_tot,len_tmp,c,sort_uid;
   int offset;
   char *gname,*s;
@@ -517,8 +517,8 @@ void ufu_sort_u_swap(struct s_env *env,struct s_usr *u1,struct s_usr *u2) {
 
 void ufu_show_g(struct s_env *env) {
 
-  int rem,again,found,redraw,key,len,row,col,rows,seqno,seq_tos,seq_bos,i,r;
-  int len_gname,len_text,len_tot,len_tmp,c,sort_gid,offset,pos;
+  int again,redraw,key,row,rows,seqno,seq_tos,seq_bos,i,r;
+  int len_gname,len_text,len_tot,c,sort_gid,offset,pos;
   char *s;
   struct s_usr *u;
   struct s_grp *g,*cos,*tos;

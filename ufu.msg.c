@@ -4,8 +4,8 @@
 
 void ufu_show_msg(struct s_env *env) {
 
-  int rem,again,found,redraw,key,len,row,col,rows,seqno,seq_tos,seq_bos,i,r;
-  int len_msg,len_tot,len_tmp,c;
+  int again,redraw,key,row,rows,seqno,seq_tos,seq_bos,i,r;
+  int len_msg,len_tot;
   char *s;
   struct s_msg *m,*cos,*tos;
 

@@ -54,7 +54,9 @@
 #define	UFU_LEN_ERROR			80
 
 #define	UFU_GLOBAL_MSG			"/etc/ufu/ufu.msg"
+#define	UFU_GLOBAL_HELP			"/etc/ufu/ufu.help"
 #define	UFU_GLOBAL_CONFIG		"/etc/ufu/ufu.cfg"
+#define	UFU_GLOBAL_LOG_DIR		"/var/log/ufu"
 #define	UFU_LOCAL_CONFIG		"ufu.cfg"
 #define	UFU_CFGDIR			".ufu"
 #define	UFU_LOGDIR			"log"
@@ -152,10 +154,9 @@
 #define	UFU_IS_REMOTE			3
 #define	UFU_MAX_TO_MARK			4
 
-#define	UFU_REM_HOSTNAME		16
-#define	UFU_REM_USERNAME		16
+#define	UFU_REM_HOSTNAME		32
+#define	UFU_REM_USERNAME		32
 #define	UFU_REM_PASSWORD		32
-#define	UFU_REM_DIRNAME			64
 #define	UFU_REM_PORT			5
 
 #define	UFU_RL_REMOTE_H			0
@@ -186,6 +187,8 @@
 
 #define	UFU_MAX_MARK			1024
 #define	UFU_MAX_TEXT			1024
+
+#define	UFU_DEF_PORT			4444
 
 #define	UFU_SEND				0
 #define	UFU_RECV				1
@@ -256,7 +259,6 @@ struct s_env {
   struct s_ucmd *ucfirst;
   struct s_ucmd *uclast;
   struct s_remote *rhfirst;
-  struct s_remote *rhlast;
   struct s_hist *hfirst;
   struct s_split *sfirst;
   struct s_mark *m_cos,*m_tos;
@@ -265,6 +267,7 @@ struct s_env {
   struct s_usr *ufirst;
   struct s_grp *gfirst;
   struct s_msg *msgfirst;
+  struct s_hlptag *tagfirst;
   int cfg_cols;
   int cfg_rows;
   int debug;
@@ -276,6 +279,7 @@ struct s_env {
   int confirmremove;
   int confirmaction;
   int savemarked;
+  int savehist;
   int writeconfig;
   int removelog;
   int incsubdir;
@@ -389,6 +393,30 @@ struct s_panel {
   struct s_entry *first;
   struct s_entry *last;
   struct s_remote *rem;
+};
+
+struct s_panel2 {
+  char *dirname;
+  char *dirnameprev;
+  char *nodename;
+  int local;
+  int remote;
+  int header;
+  int ndirs;
+  int nfiles;
+  int nlinks;
+  int ntotal;
+  int sortc;
+  int sorto;
+  long int size;
+  struct s_entry *info;
+  struct s_entry *tos;
+  struct s_entry *cos;
+  struct s_entry *first;
+  struct s_entry *last;
+  struct s_remote *rem;
+  struct s_panel2 *next;
+  struct s_panel2 *prev;
 };
 
 struct s_entry {
@@ -522,6 +550,22 @@ struct s_msg {
   struct s_msg *prev;
 };
 
+struct s_hlptag {
+  int seqno;
+  int tag;
+  char *txt;
+  struct s_hlptag *next;
+  struct s_hlptag *prev;
+  struct s_hlptxt *fhlptxt;
+};
+
+struct s_hlptxt {
+  int seqno;
+  char *txt;
+  struct s_hlptxt *next;
+  struct s_hlptxt *prev;
+};
+
 struct s_remote {
   int seqno;
   int local;
@@ -529,9 +573,6 @@ struct s_remote {
   int port;
   char *username;
   char *password;
-  char *dirname;
-  int sockfd;
-  char *dversion;
   struct s_remote *next;
   struct s_remote *prev;
 };

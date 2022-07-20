@@ -9,11 +9,11 @@ void ufu_open_log(struct s_env *env) {
     // No buffering.
     setbuf(env->lognamefp,NULL);
     sprintf(env->msg,"Log opened for writing.");
-    ufu_log(env);
+    ufu_dbg(env);
     sprintf(env->msg,UFU_VERSION);
-    ufu_log(env);
+    ufu_dbg(env);
     sprintf(env->msg,UFU_BUILDDATE);
-    ufu_log(env);
+    ufu_dbg(env);
     strcpy(env->fun,"ufu_open_log");
     ufu_wai(env);
   }
@@ -27,7 +27,7 @@ void ufu_close_log(struct s_env *env) {
 
   if(env->lognamefp!=NULL) {
     sprintf(env->msg,"Log \"%s\" closed for writing.",env->logname);
-    ufu_log(env);
+    ufu_dbg(env);
     fclose(env->lognamefp);
     if(env->removelog) {
       unlink(env->logname);
@@ -43,55 +43,50 @@ void ufu_log(struct s_env *env) {
   time_t t_result;
   struct tm *tm_result;
 
-  tstamp=ufu_alloc_string(env,32);
-  t_result=time(NULL);
-  tm_result=localtime(&t_result);
+  if(env->debug) {
 
-  year=tm_result->tm_year+1900;
-  month=tm_result->tm_mon+1;
-  day=tm_result->tm_mday;
+    tstamp=ufu_alloc_string(env,32);
+    t_result=time(NULL);
+    tm_result=localtime(&t_result);
 
-  hour=tm_result->tm_hour;
-  min=tm_result->tm_min;
-  sec=tm_result->tm_sec;
+    year=tm_result->tm_year+1900;
+    month=tm_result->tm_mon+1;
+    day=tm_result->tm_mday;
 
-  sprintf(tstamp,"%4d%02d%02d%02d%02d%02d",year,month,day,hour,min,sec);
+    hour=tm_result->tm_hour;
+    min=tm_result->tm_min;
+    sec=tm_result->tm_sec;
 
-  if(env->lognamefp!=NULL) {
-    fprintf(env->lognamefp,"%s: %s\n",tstamp,env->msg);
-    fflush(env->lognamefp);
+    sprintf(tstamp,"%4d%02d%02d%02d%02d%02d",year,month,day,hour,min,sec);
+
+    if(env->lognamefp!=NULL) {
+      fprintf(env->lognamefp,"%s: %s\n",tstamp,env->msg);
+      fflush(env->lognamefp);
+    }
+
+    ufu_free_string(env,tstamp);
+
   }
-
-  // ufu_msg(env);
-
-  ufu_free_string(env,tstamp);
 
 }
 
 void ufu_dbg(struct s_env *env) {
 
-  char *s;
+  int debug;
 
-  if(env->debug) {
+  debug=env->debug;
+  env->debug=TRUE;
 
-    s=ufu_alloc_string(env,1024);
-    if(strlen(env->fun)==0) {
-      strcpy(env->fun,"UNKNOWN");
-    }
-    sprintf(s,"[DEBUG|%s] %s",env->fun,env->msg);
-    strcpy(env->msg,s);
-    ufu_free_string(env,s);
+  ufu_log(env);
 
-    ufu_log(env);
-    strcpy(env->fun,"");
-
-  }
+  env->debug=debug;
 
 }
 
 void ufu_wai(struct s_env *env) {
 
   if(env->debug) {
+
     if(strlen(env->fun)>0) {
       sprintf(env->msg,"f(%s)",env->fun);
       strcpy(env->fun,"");
@@ -99,7 +94,9 @@ void ufu_wai(struct s_env *env) {
     else {
       strcpy(env->msg,"[FUNCTION] Unknown!");
     }
+
     ufu_log(env);
+
   }
 
 }
@@ -111,7 +108,7 @@ int ufu_read_log(struct s_env *env) {
   struct s_log *t;
   FILE *fp;
 
-  strcpy(env->fun,"ufu_view_log");
+  strcpy(env->fun,"ufu_read_log");
   ufu_wai(env);
 
   sprintf(env->msg,"Opening logfile \"%s\".",env->logname);
@@ -186,7 +183,7 @@ void ufu_view_log(struct s_env *env) {
   char *search;
   struct s_log *t,*t_tmp,*cos,*tos;
 
-  strcpy(env->fun,"ufu_show_log");
+  strcpy(env->fun,"ufu_view_log");
   ufu_wai(env);
 
   len_text=ufu_read_log(env);
@@ -509,7 +506,9 @@ int ufu_search_log(struct s_env *env,int key,char *search,struct s_log *e) {
     case UFU_KEY_SCROLL_DOWN:
       w=ufu_popup(env,UFU_LEN_SEARCH+2,3,(env->cols-UFU_LEN_SEARCH)/2,(env->rows/2)-4,"Forward search");
       ufu_wrefresh(env->bottom);
-      ufu_rl(env,w,1,1,TRUE,UFU_LEN_SEARCH,UFU_LEN_SEARCH,search,TRUE,FALSE);
+      ufu_rl2(env,w,1,1,UFU_LEN_SEARCH,TRUE,search);
+      sprintf(env->msg,"First skip to next line in logile.");
+      ufu_log(env);
       seqno=e->seqno;
       if(e->next!=NULL) {
 	e=e->next;
@@ -517,6 +516,8 @@ int ufu_search_log(struct s_env *env,int key,char *search,struct s_log *e) {
       else {
 	e=env->lfirst;
       }
+      sprintf(env->msg,"Forward search for \"%s\" in log.",search);
+      ufu_log(env);
       found=FALSE;
       while((e!=NULL)&&(e->seqno!=seqno)&&(!found)) {
 	found=((strstr(e->text,search)!=NULL)||(strstr(e->ts,search)!=NULL));
@@ -530,19 +531,19 @@ int ufu_search_log(struct s_env *env,int key,char *search,struct s_log *e) {
 	}
       }
       if(found) {
-	sprintf(env->msg,"Searchstring \"%s\" found at seqno %d.",search,e->seqno);
-	ufu_alert(env);
-	return(e->seqno);
+	seqno=e->seqno;
       }
       else {
-        return(-1);
+	seqno=-1;
       }
       break;
     case UFU_KEY_SCROLL_UP:
       // Backward.
       w=ufu_popup(env,UFU_LEN_SEARCH+2,3,(env->cols-UFU_LEN_SEARCH)/2,(env->rows/2)-4,"Backward search");
       ufu_wrefresh(env->bottom);
-      ufu_rl(env,w,1,1,TRUE,UFU_LEN_SEARCH,UFU_LEN_SEARCH,search,TRUE,FALSE);
+      ufu_rl2(env,w,1,1,UFU_LEN_SEARCH,TRUE,search);
+      sprintf(env->msg,"First skip to previous line in logile.");
+      ufu_log(env);
       seqno=e->seqno;
       if(e->prev!=NULL) {
 	e=e->prev;
@@ -555,6 +556,8 @@ int ufu_search_log(struct s_env *env,int key,char *search,struct s_log *e) {
 	}
 	e=tmp_e;
       }
+      sprintf(env->msg,"Backward search for \"%s\" in log.",search);
+      ufu_log(env);
       found=FALSE;
       while((e!=NULL)&&(e->seqno!=seqno)&&(!found)) {
 	found=((strstr(e->text,search)!=NULL)||(strstr(e->ts,search)!=NULL));
@@ -572,17 +575,19 @@ int ufu_search_log(struct s_env *env,int key,char *search,struct s_log *e) {
 	  }
 	}
       }
-      if(found) {
-	sprintf(env->msg,"Searchstring \"%s\" found at seqno %d.",search,e->seqno);
-	ufu_alert(env);
-	seqno=e->seqno;
-      }
-      else {
-        seqno=-1;
-      }
       break;
   }
 
+  if(found) {
+    sprintf(env->msg,"Searchstring \"%s\" found at seqno %d.",search,e->seqno);
+    seqno=e->seqno;
+  }
+  else {
+    sprintf(env->msg,"Searchstring \"%s\" NOT found in logfile.",search);
+    seqno=-1;
+  }
+
+  ufu_alert(env);
   ufu_popdown(env,w);
 
   return(seqno);

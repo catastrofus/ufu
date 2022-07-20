@@ -16,6 +16,8 @@ struct s_env *ufu_alloc_env(int argc,char **argv) {
   struct s_env *env;
   struct utsname u;
 
+  FILE *fp;
+
   debug=ufu_get_arg(argc,argv);
 
   if((env=(struct s_env *)malloc(sizeof(struct s_env)))==NULL) {
@@ -102,6 +104,7 @@ struct s_env *ufu_alloc_env(int argc,char **argv) {
   env->confirmremove=TRUE;
   env->confirmaction=TRUE;
   env->savemarked=FALSE;
+  env->savehist=FALSE;
   env->ignoreerror=FALSE;
   env->incsubdir=FALSE;
   env->dirfirst=TRUE;
@@ -161,33 +164,75 @@ struct s_env *ufu_alloc_env(int argc,char **argv) {
 
   ufu_free_string(env,s);
 
-  // Concat homedir & local configname.
-  // ufu_concat_dir(env,env->cfglocal,env->homedir,UFU_LOCAL_CONFIG);
-
-  // Concat homedir & logfilename.
-  ufu_concat_dir(env,env->logname,env->homedir,UFU_CFGDIR);
-  ufu_concat_dir(env,env->logname,env->logname,UFU_LOGDIR);
-
   // Concat homedir & <tcdir|tcfile>.
   ufu_concat_dir(env,env->tcdir,env->homedir,UFU_CFGDIR);
   ufu_concat_dir(env,env->tcdir,env->tcdir,UFU_TCDIR);
   ufu_concat_dir(env,env->tcfile,env->tcdir,UFU_TCFILE);
 
-  strcat(env->logname,"/");
+  // Concat homedir & local configname.
+  // ufu_concat_dir(env,env->cfglocal,env->homedir,UFU_LOCAL_CONFIG);
+
+  // Construct name of logfile.
+  // First find out if a global log directory is accessable.
+
+  s=ufu_alloc_string(env,UFU_LEN_NAME);
+
+  ufu_concat_dir(env,s,s,UFU_GLOBAL_LOG_DIR);
+  ufu_concat_dir(env,s,s,env->uname);
+
+  // Trying to create global log directory "UFU_GLOBAL_LOG_DIR/env->uname".
+  mkdir(s,0700);
+
+  strcat(s,"/");
 
   spid=ufu_alloc_string(env,16);
   sprintf(spid,"%05d",env->pid);
 
-  strcat(env->logname,spid);
-  strcat(env->logname,".");
-  strcat(env->logname,UFU_LOGFILE);
+  strcat(s,spid);
+  strcat(s,".");
+  strcat(s,UFU_LOGFILE);
 
   ufu_free_string(env,spid);
+
+  if((fp=fopen(s,"w"))!=NULL) {
+
+    // Close the file.
+    fclose(fp);
+
+    // Remove it.
+    unlink(s);
+
+    strcpy(env->logname,s);
+
+  }
+  else {
+    // Failed to open the global logfile.
+    // Create a local logfile.
+
+    // Concat homedir & logfilename.
+    ufu_concat_dir(env,env->logname,env->homedir,UFU_CFGDIR);
+    ufu_concat_dir(env,env->logname,env->logname,UFU_LOGDIR);
+
+    strcat(env->logname,"/");
+
+    spid=ufu_alloc_string(env,16);
+    sprintf(spid,"%05d",env->pid);
+
+    strcat(env->logname,spid);
+    strcat(env->logname,".");
+    strcat(env->logname,UFU_LOGFILE);
+
+    ufu_free_string(env,spid);
+
+    strcpy(s,env->logname);
+
+  }
 
   // Pointer for logfile.
   env->lognamefp=NULL;
 
   ufu_open_log(env);
+  ufu_log(env);
 
   sprintf(env->msg,"UFU started as executable '%s'.",argv[0]);
   ufu_log(env);
@@ -196,6 +241,11 @@ struct s_env *ufu_alloc_env(int argc,char **argv) {
     sprintf(env->msg,"DEBUG turned on due to the commandline argument '-d'.");
     ufu_log(env);
   }
+
+  sprintf(env->msg,"Using logfile \"%s\".",s);
+  ufu_log(env);
+
+  ufu_free_string(env,s);
 
   strcpy(env->fun,"ufu_alloc_env");
   ufu_wai(env);
@@ -211,7 +261,6 @@ struct s_env *ufu_alloc_env(int argc,char **argv) {
   sprintf(env->msg,"Reading COLUMNS (%d) from environment.",env->cols);
   ufu_log(env);
 
-  // Read user & group file.
   env->ufirst=NULL;
   env->gfirst=NULL;
 
@@ -222,7 +271,6 @@ struct s_env *ufu_alloc_env(int argc,char **argv) {
   env->uclast=NULL;
 
   env->rhfirst=NULL;
-  env->rhlast=NULL;
 
   env->sfirst=NULL;
 
@@ -230,6 +278,11 @@ struct s_env *ufu_alloc_env(int argc,char **argv) {
 
   env->tfirst=NULL;
 
+  env->msgfirst=NULL;
+
+  env->tagfirst=NULL;
+
+  // Read user & group file.
   ufu_read_users(env);
   ufu_read_groups(env);
 
@@ -594,6 +647,64 @@ struct s_msg *ufu_alloc_msg(struct s_env *env) {
 
 }
 
+struct s_hlptag *ufu_alloc_hlptag(struct s_env *env,int len) {
+
+  struct s_hlptag *e;
+
+  strcpy(env->fun,"ufu_alloc_hlptag");
+  ufu_wai(env);
+
+  if((e=(struct s_hlptag *)malloc(sizeof(struct s_hlptag)))==NULL) {
+
+    sprintf(env->msg,"Unable to allocate memory for structure 's_hlptag'!");
+    ufu_log(env);
+    sprintf(env->msg,"Needed: %ld bytes.",sizeof(struct s_hlptag));
+    ufu_log(env);
+
+    exit(1);
+
+  }
+
+  e->tag=0;
+  e->txt=ufu_alloc_string(env,len);
+  e->next=NULL;
+  e->prev=NULL;
+  e->fhlptxt=NULL;
+
+  ufu_mod_lmem(env,sizeof(struct s_hlptag));
+
+  return(e);
+
+}
+
+struct s_hlptxt *ufu_alloc_hlptxt(struct s_env *env,int len) {
+
+  struct s_hlptxt *e;
+
+  strcpy(env->fun,"ufu_alloc_hlptxt");
+  ufu_wai(env);
+
+  if((e=(struct s_hlptxt *)malloc(sizeof(struct s_hlptxt)))==NULL) {
+
+    sprintf(env->msg,"Unable to allocate memory for structure 's_hlptxt'!");
+    ufu_log(env);
+    sprintf(env->msg,"Needed: %ld bytes.",sizeof(struct s_hlptxt));
+    ufu_log(env);
+
+    exit(1);
+
+  }
+
+  e->txt=ufu_alloc_string(env,len);
+  e->next=NULL;
+  e->prev=NULL;
+
+  ufu_mod_lmem(env,sizeof(struct s_hlptxt));
+
+  return(e);
+
+}
+
 struct s_log *ufu_alloc_log(struct s_env *env,int len) {
 
   struct s_log *t;
@@ -779,18 +890,14 @@ struct s_remote *ufu_alloc_remote(struct s_env *env) {
   }
 
   rh->seqno=0;
-  rh->port=0;
+  rh->port=UFU_DEF_PORT;
 
   rh->hostname=ufu_alloc_string(env,UFU_REM_HOSTNAME);
   rh->username=ufu_alloc_string(env,UFU_REM_USERNAME);
   rh->password=ufu_alloc_string(env,UFU_REM_PASSWORD);
-  rh->dirname=ufu_alloc_string(env,UFU_LEN_NAME);
-  rh->dversion=ufu_alloc_string(env,UFU_LEN_VERSION);
 
   rh->next=NULL;
   rh->prev=NULL;
-
-  rh->sockfd=0;
 
   ufu_mod_lmem(env,sizeof(struct s_remote));
 
@@ -961,7 +1068,7 @@ void ufu_free_env(struct s_env *env) {
 
   ufu_free_users(env);
   ufu_free_groups(env);
-  ufu_free_remote_hosts(env);
+  // ufu_free_remote_hosts(env);
 
   ufu_free_string(env,env->cfglocal);
   ufu_free_string(env,env->cfgglobal);
@@ -1152,6 +1259,41 @@ void ufu_free_msg(struct s_env *env,struct s_msg *m) {
 
 }
 
+void ufu_free_hlptag(struct s_env *env,struct s_hlptag *e) {
+
+  struct s_hlptxt *h1,*h2;
+
+  strcpy(env->fun,"ufu_free_hlptag");
+  ufu_wai(env);
+
+  if(e!=NULL) {
+    ufu_free_string(env,e->txt);
+    ufu_mod_lmem(env,(long)(0-sizeof(struct s_hlptag)));
+    h1=e->fhlptxt;
+    while(h1!=NULL) {
+      h2=h1->next;
+      ufu_free_hlptxt(env,h1);
+      h1=h2;
+    }
+    ufu_mod_lmem(env,(long)(0-sizeof(struct s_hlptag)));
+    free(e);
+  }
+
+}
+
+void ufu_free_hlptxt(struct s_env *env,struct s_hlptxt *e) {
+
+  strcpy(env->fun,"ufu_free_hlptxt");
+  ufu_wai(env);
+
+  if(e!=NULL) {
+    ufu_free_string(env,e->txt);
+    ufu_mod_lmem(env,(long)(0-sizeof(struct s_hlptxt)));
+    free(e);
+  }
+
+}
+
 void ufu_free_log(struct s_env *env,struct s_log *t) {
 
   if(t!=NULL) {
@@ -1239,8 +1381,6 @@ void ufu_free_remote(struct s_env *env,struct s_remote *rh) {
     ufu_free_string(env,rh->hostname);
     ufu_free_string(env,rh->username);
     ufu_free_string(env,rh->password);
-    ufu_free_string(env,rh->dirname);
-    ufu_free_string(env,rh->dversion);
     ufu_mod_lmem(env,(long)(0-sizeof(struct s_remote)));
     free(rh);
   }

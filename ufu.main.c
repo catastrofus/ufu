@@ -5,18 +5,18 @@
 void ufu_main(struct s_env *env) {
 
   int i,len,is_dir,is_lnk,local,remote;
-  int panel,key,again,redraw,changed,marked,seqno,lineno;
+  int panel,key,again,changed,redraw,marked,seqno,lineno;
   int rows,seq_tos,seq_bos;
   int sortc,sorto,header;
   char c;
-  char *dname,*tmp_dname,*pname,*inp;
+  char *dname,*tmp_dname,*pname,*inp,*s;
   struct s_entry *tos,*cos,*tmp_tos,*tmp_cos;
   struct s_remote *r;
+  WINDOW *w;
 
   again=TRUE;
   redraw=TRUE;
   marked=FALSE;
-  changed=FALSE;
   panel=UFU_MIN_PANEL;
   key=UFU_KEY_NOP;
 
@@ -735,7 +735,7 @@ void ufu_main(struct s_env *env) {
         break;
 
       case UFU_KEY_REMOTE:
-        ufu_show_remote(env,NULL);
+        ufu_show_remote(env,TRUE);
         break;
 
       case UFU_KEY_LOG:
@@ -806,39 +806,48 @@ void ufu_main(struct s_env *env) {
 
       case UFU_KEY_GO:
         env->key_go++;
+	s=ufu_alloc_string(env,env->cols);
         inp=ufu_alloc_string(env,6);
-        sprintf(env->msg,"%s, enter your seqno:",env->master);
+        sprintf(s,"Enter seqno:");
         ufu_msg(env);
         ufu_clear_string(env,inp,6);
-        ufu_rl(env,env->bottom,strlen(env->msg)+1,0,TRUE,5,5,inp,TRUE,FALSE);
+	len=strlen(s);
+	w=ufu_popup(env,len+10,3,(env->cols-len)/2,(env->rows/2)-1,s);
+        ufu_rl2(env,w,1,1,5,TRUE,inp);
         lineno=atoi(inp);
+	ufu_popdown(env,w);
 
-        ufu_goto_seqno(env,UFU_SEARCH_ENTRY,panel,lineno);
-        cos=env->panel[panel]->cos;
-        tos=env->panel[panel]->tos;
+	if(strlen(inp)>0) {
+          ufu_goto_seqno(env,UFU_SEARCH_ENTRY,panel,lineno);
+          cos=env->panel[panel]->cos;
+          tos=env->panel[panel]->tos;
+	}
 
         ufu_free_string(env,inp);
+        ufu_free_string(env,s);
         break;
 
       case UFU_KEY_SEARCH:
 
         env->key_search++;
-        sprintf(env->msg,"%s, enter pattern:",env->master);
-        ufu_msg(env);
-        len=env->cols-strlen(env->msg)-1;
-        inp=ufu_alloc_string(env,len);
+	s=ufu_alloc_string(env,env->cols);
+        inp=ufu_alloc_string(env,env->cols);
+        sprintf(s,"Enter pattern");
+        len=env->cols-20;
         ufu_clear_string(env,inp,len);
-        ufu_rl(env,env->bottom,strlen(env->msg)+1,0,TRUE,len-1,len-1,inp,TRUE,FALSE);
+	w=ufu_popup(env,len,3,(env->cols-len)/2,(env->rows/2)-1,s);
+        ufu_rl2(env,w,1,1,len-2,TRUE,inp);
 
-        env->panel[panel]->cos=cos;
-        env->panel[panel]->tos=tos;
-
-        ufu_goto_fname(env,UFU_SEARCH_ENTRY,panel,inp);
-
-        cos=env->panel[panel]->cos;
-        tos=env->panel[panel]->tos;
+	if(strlen(inp)>0) {
+          env->panel[panel]->cos=cos;
+          env->panel[panel]->tos=tos;
+          ufu_goto_fname(env,UFU_SEARCH_ENTRY,panel,inp);
+          cos=env->panel[panel]->cos;
+          tos=env->panel[panel]->tos;
+	}
 
         ufu_free_string(env,inp);
+        ufu_free_string(env,s);
         break;
 
       default:

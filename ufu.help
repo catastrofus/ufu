@@ -1,0 +1,205 @@
+#
+0:t:Help for main window
+0:h:   q    - Quit UFU.
+0:h: <up>   - To previous entry.
+0:h: <dn>   - To next entry.
+0:h:   ]    - Scroll up.
+0:h:   [    - Scroll down.
+0:h:   p    - To previous page of entries.
+0:h:   n    - To next page of entries.
+0:h:   f    - To first entry.
+0:h:   l    - To next entry.
+0:h:   h    - Switch current panel to home directory.
+0:h:   w    - Switch current panel to startup directory.
+0:h:   /    - Switch current panel to root directory.
+0:h:   m    - Switch header.
+0:h:   j    - Switch sort column.
+0:h:   k    - Switch sort order.
+0:h: <rt>   - To next panel.
+0:h: <lt>   - To previous panel.
+0:h: <TB>   - Select panel.
+0:h:   y    - To remote entries.
+0:h:   g    - To marked entries.
+0:h:<space> - Mark/Unmark entry.
+0:h:   a    - Mark all entries.
+0:h:   g    - Show marked entries.
+0:h:<enter> - Select.
+0:h:   u    - User commands.
+0:h:   c    - Configuration.
+0:h:   s    - Settings.
+0:h:   i    - Info.
+0:h:   v    - View file.
+0:h:   e    - Edit file.
+0:h:   t    - Go to seqno.
+0:h:   +    - View users.
+0:h:   -    - View groups.
+0:h:   _    - View messages.
+0:h:   ,    - Search pattern.
+0:h:   z    - View logfile.
+#
+1:t:Help for select panel window
+1:h:   q    - Quit panel.
+1:h: <up>   - To previous panel.
+1:h: <dn>   - To next panel.
+1:h: <pp>   - To previous page of panels.
+1:h: <np>   - To next page of panels.
+1:h:   f    - To first panel.
+1:h:   l    - To last panel.
+1:h:   a    - Add new panel.
+1:h:   r    - Delete panel.
+1:h:   i    - Info panel.
+1:h:   y    - To remote entries.
+1:h:<space> - Mark/Unmark panel.
+1:h:<enter> - Select.
+1:h:   z    - View logfile.
+#
+8:t:Help for trash window
+8:h:   q    - Quit trashcan.
+8:h: <up>   - To previous trash.
+8:h: <dn>   - To next trash.
+8:h: <pp>   - To previous page of trash.
+8:h: <np>   - To next page of trash.
+8:h:   f    - To first trash.
+8:h:   l    - To last trash.
+8:h:   z    - View logfile.
+6:t:Help for xinfo window
+6:h:   q    - Quit xinfo.
+6:h: <up>   - To previous entry.
+6:h: <dn>   - To next entry.
+6:h: <pp>   - To previous page of entries.
+6:h: <np>   - To next page of entries.
+6:h:   f    - To first entry.
+6:h:   l    - To last panel.
+6:h:   i    - Info entry.
+6:h:<enter> - Info entry.
+#
+15:t:Help for select window
+15:h:   q    - Quit.
+15:h: <up>   - To previous line.
+15:h: <dn>   - To next line.
+15:h:   f    - To first line.
+15:h:   l    - To last line.
+15:h:<enter> - Select.
+#
+13:t:Help for select window
+13:h:   q    - Quit.
+13:h: <up>   - To previous line.
+13:h: <dn>   - To next line.
+13:h:   f    - To first line.
+13:h:   l    - To last line.
+13:h:<enter> - Select.
+#
+9:t:Help for select window
+9:h:   q    - Quit.
+9:h: <up>   - To previous line.
+9:h: <dn>   - To next line.
+9:h:   f    - To first line.
+9:h:   l    - To last line.
+9:h:<enter> - Select.
+#
+14:t:Help for select window
+14:h:   q    - Quit.
+14:h: <up>   - To previous line.
+14:h: <dn>   - To next line.
+14:h:   f    - To first line.
+14:h:   l    - To last line.
+14:h:<enter> - Select.
+#
+10:t:Help for program configuration
+10:h:   q    - Quit.
+10:h:   1    - Show standard key hit ratio.
+10:h:   2    - Show usercommand key hit ratio.
+10:h:   3    - Show history key hit ratio.
+#
+3:t:Help for marked entries
+3:h:   q    - Quit marked entries.
+3:h: <up>   - To previous marked entry.
+3:h: <dn>   - To next marked entry.
+3:h: <pp>   - To previous page of marked entries.
+3:h: <np>   - To next page of marked entries.
+3:h:   f    - To first set of marked entries.
+3:h:   l    - To next set of marked entries.
+3:h:   i    - Info entry.
+3:h:   c    - Configuration.
+3:h:   s    - Settings.
+3:h:<space> - Unmark entry.
+3:h:   ,    - Search marked entries.
+3:h:   x    - Expunge marked entries.
+3:h:   v    - View file.
+3:h:   e    - Edit file.
+3:h:   z    - View logfile.
+3:h:   a    - Actions!
+#
+5:t:Help for remote entries
+5:h:   q    - Quit remote entries.
+5:h: <up>   - To previous remote entry.
+5:h: <dn>   - To next remote entry.
+5:h: <pp>   - To previous page of remote entries.
+5:h: <np>   - To next page of remote entries.
+5:h:   f    - To first set of remote entries.
+5:h:   l    - To next set of remote entries.
+5:h:   c    - Connect to remote entry.
+5:h:   e    - Edit remote entry.
+5:h:   a    - Add remote entry.
+5:h:   r    - Remove remote entry.
+5:h:   b    - Enter password.
+#
+4:t:Help for usercommands
+4:h:   q    - Quit usercommands.
+4:h: <up>   - To previous usercommand.
+4:h: <dn>   - To next usercommand.
+4:h: <pp>   - To previous page of usercommands.
+4:h: <np>   - To next page of usercommands.
+4:h:   f    - To first set of usercommands.
+4:h:   l    - To next set of usercommands.
+4:h:   i    - Info usercommand.
+4:h:   e    - Edit usercommand.
+4:h:   a    - Add usercommand.
+4:h:   r    - Remove usercommand.
+4:h:<enter> - Execute usercommand.
+4:h:
+4:h:Substitutions - {A} will be replaced by the absolute filename.
+4:h:              - {R} will be replaced by the relative filename.
+4:h:              - {B} will be replaced by the basename.
+#
+11:t:Help for viewing users
+11:h:   q    - Quit view.
+11:h: <up>   - To previous user.
+11:h: <dn>   - To next user.
+11:h: <pp>   - To previous page of users.
+11:h: <np>   - To next page of users.
+11:h:   f    - To first set of users.
+11:h:   l    - To last set of users.
+11:h:   1    - Show directory/shell.
+11:h:   2    - Show secondary groups.
+11:h:   0    - Switch sort between uid & username.
+11:h: <left> - Shift secondary groups to the left.
+11:h:<right> - Shift secondary groups to the right.
+#
+12:t:Help for viewing users
+12:h:   q    - Quit view.
+12:h: <up>   - To previous user.
+12:h: <dn>   - To next user.
+12:h: <pp>   - To previous page of users.
+12:h: <np>   - To next page of users.
+12:h:   f    - To first set of users.
+12:h:   l    - To last set of users.
+12:h:   0    - Switch sort between gid & groupname.
+12:h: <left> - Shift users to the left.
+12:h:<right> - Shift users to the right.
+#
+16:t:Help for viewing log
+16:h:   q    - Quit view.
+16:h: <up>   - To previous line.
+16:h: <dn>   - To next line.
+16:h: <pp>   - To previous page of lines.
+16:h: <np>   - To next page of lines.
+16:h:   f    - To first set of lines.
+16:h:   l    - To last set of lines.
+16:h:   1    - Toggle seqno on/off.
+16:h:   2    - Toggle timestamp on/off.
+16:h:   [    - Forward search.
+16:h:   ]    - Backward search.
+16:h: <left> - Shift text to the left.
+16:h:<right> - Shift text to the right.
+#

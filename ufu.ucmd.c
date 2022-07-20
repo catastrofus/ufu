@@ -36,14 +36,10 @@ void ufu_write_ucmd(struct s_env *env) {
 
 int ufu_edit_ucmd(struct s_env *env,struct s_ucmd *uc,int scope,int row,int col,int insert) {
 
-  int ok;
-
   strcpy(env->fun,"ufu_edit_ucmd");
   ufu_wai(env);
 
-  ok=ufu_rl(env,env->body,col,row,insert,UFU_LEN_UCMD,env->cols-12,uc->exec,TRUE,TRUE);
-
-  return(ok);
+  return(ufu_rl2(env,env->body,col,row,UFU_LEN_UCMD,TRUE,uc->exec)!=NULL);
 
 }
 

@@ -38,7 +38,7 @@ int ufu_get_arg(int argc,char **argv) {
       if(strcmp(argv[i],"-v")==0) {
         printf("%s: a U)nix F)ile U)tility, %s\n",argv[0],UFU_VERSION);
         printf("usage: %s [-v]|[-d][<dir>[<dir>[...]]]\n",argv[0]);
-        printf("where:  -v   -> Show version & usage.\n");
+        printf("where:  -v   -> Show version & (this) usage.\n");
         printf("        -d   -> Turn DEBUG on.\n");
         printf("       <dir> -> Directory to include in panel.\n");
         exit(1);
@@ -165,7 +165,7 @@ int ufu_get_key(struct s_env *env,int textline,char *s) {
   }
   ufu_wrefresh(env->bottom);
 
-  return(tolower(wgetch(env->bottom)));
+  return(wgetch(env->bottom));
 
 }
 

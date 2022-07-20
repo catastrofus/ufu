@@ -4,9 +4,9 @@
 
 void ufu_show_txt(struct s_env *env,int panel,char *s) {
 
-  int rem,again,changed,redraw,key,len,resizelen,start,row,col,rows,seqno,seq_tos,seq_bos,i,r;
+  int again,redraw,key,len,resizelen,start,row,rows,seq_tos,seq_bos,i;
   char *s1,*s2;
-  struct s_txt *uc,*cos,*tos,*uc1;
+  struct s_txt *uc,*cos,*tos;
 
   strcpy(env->fun,"ufu_show_txt");
   ufu_wai(env);
@@ -26,7 +26,6 @@ void ufu_show_txt(struct s_env *env,int panel,char *s) {
 
   uc=env->tfirst;
 
-  changed=FALSE;
   redraw=TRUE;
   again=(uc!=NULL);
 

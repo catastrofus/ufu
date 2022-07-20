@@ -1,0 +1,187 @@
+
+#include "ufu.h"
+#include "ufu.p"
+
+void ufu_help(struct s_env *env,int panel,int function) {
+
+  int row,col;
+
+  ufu_clear(env);
+
+  row=1;
+  col=9;
+
+  switch(function) {
+
+    case UFU_HELP_MAIN:
+      mvwprintw(env->top,0,0,"[%s] Help for main window",env->nodename);
+      mvwprintw(env->body,row++,col,"   %c    - Quit UFU.",UFU_KEY_QUIT);
+      mvwprintw(env->body,row++,col," <up>   - To previous entry.");
+      mvwprintw(env->body,row++,col," <dn>   - To next entry.");
+      mvwprintw(env->body,row++,col,"   %c    - To previous page of entries.",UFU_KEY_PREVPAGE);
+      mvwprintw(env->body,row++,col,"   %c    - To next page of entries.",UFU_KEY_NEXTPAGE);
+      mvwprintw(env->body,row++,col,"   %c    - To first entry.",UFU_KEY_FIRST);
+      mvwprintw(env->body,row++,col,"   %c    - To next entry.",UFU_KEY_LAST);
+      mvwprintw(env->body,row++,col,"   %c    - Switch current panel #%d to \"%s\".",UFU_KEY_DIRHOME,panel,env->homedir);
+      mvwprintw(env->body,row++,col,"   %c    - Switch current panel #%d to \"%s\".",UFU_KEY_DIRWORK,panel,env->workdir);
+      mvwprintw(env->body,row++,col,"   %c    - Switch current panel #%d to \"/\".",UFU_KEY_DIRROOT,panel);
+      if(strlen(env->panel[panel]->dirnameprev)>0) {
+        mvwprintw(env->body,row++,col,"   %c    - Switch current panel #%d to \"%s\".",UFU_KEY_PREVDIR,panel,env->panel[panel]->dirnameprev);
+      }
+      mvwprintw(env->body,row++,col,"   %c    - Switch header.",UFU_KEY_HEADER);
+      mvwprintw(env->body,row++,col,"   %c    - Switch sort column.",UFU_KEY_SORT_COL);
+      mvwprintw(env->body,row++,col,"   %c    - Switch sort order.",UFU_KEY_SORT_ORDER);
+      mvwprintw(env->body,row++,col," <rt>   - To next panel.");
+      mvwprintw(env->body,row++,col," <lt>   - To previous panel.");
+      mvwprintw(env->body,row++,col," <TB>   - Select panel.");
+      if(env->rows<30) {
+        ufu_wrefresh(env->top);
+        ufu_wrefresh(env->body);
+        ufu_any_key(env);
+        ufu_clear(env);
+        row=1;
+        mvwprintw(env->top,0,0,"[%s] Help for main window",env->nodename);
+      }
+      mvwprintw(env->body,row++,col,"   %c    - To remote entries.",UFU_KEY_REMOTE);
+      mvwprintw(env->body,row++,col,"<space> - Mark/Unmark entry.");
+      mvwprintw(env->body,row++,col,"   %c    - Show marked entries.",UFU_KEY_MARKED);
+      mvwprintw(env->body,row++,col,"<enter> - Select.");
+      mvwprintw(env->body,row++,col,"   %c    - User commands.",UFU_KEY_UCMD);
+      mvwprintw(env->body,row++,col,"   %c    - Configuration.",UFU_KEY_CONFIG);
+      mvwprintw(env->body,row++,col,"   %c    - Settings.",UFU_KEY_SETTING);
+      mvwprintw(env->body,row++,col,"   %c    - Info.",UFU_KEY_INFO);
+      mvwprintw(env->body,row++,col,"   %c    - View file.",UFU_KEY_VIEW);
+      mvwprintw(env->body,row++,col,"   %c    - Edit file.",UFU_KEY_EDIT);
+      mvwprintw(env->body,row++,col,"   %c    - Go to seqno.",UFU_KEY_GO);
+      mvwprintw(env->body,row++,col,"   %c    - Search pattern.",UFU_KEY_SEARCH);
+      mvwprintw(env->body,row++,col,"   %c    - View logfile \"%s\".",UFU_KEY_LOG,env->logname);
+      break;
+
+    case UFU_HELP_PANEL:
+      mvwprintw(env->top,0,0,"[%s] Help for select panel window",env->nodename);
+      mvwprintw(env->body,row++,col,"   %c    - Quit panel.",UFU_KEY_QUIT);
+      mvwprintw(env->body,row++,col," <up>   - To previous panel.");
+      mvwprintw(env->body,row++,col," <dn>   - To next panel.");
+      mvwprintw(env->body,row++,col," <pp>   - To previous page of panels.");
+      mvwprintw(env->body,row++,col," <np>   - To next page of panels.");
+      mvwprintw(env->body,row++,col,"   %c    - To first panel.",UFU_KEY_FIRST);
+      mvwprintw(env->body,row++,col,"   %c    - To last panel.",UFU_KEY_LAST);
+      mvwprintw(env->body,row++,col,"   %c    - Add new panel.",UFU_KEY_APPEND);
+      mvwprintw(env->body,row++,col,"   %c    - Delete panel.",UFU_KEY_ERASE);
+      mvwprintw(env->body,row++,col,"   %c    - Info panel.",UFU_KEY_INFO);
+      mvwprintw(env->body,row++,col,"   %c    - To remote entries.",UFU_KEY_REMOTE);
+      mvwprintw(env->body,row++,col,"<space> - Mark/Unmark panel.");
+      mvwprintw(env->body,row++,col,"<enter> - Select.");
+      mvwprintw(env->body,row++,col,"   %c    - View logfile \"%s\".",UFU_KEY_LOG,env->logname);
+      break;
+
+    case UFU_HELP_XINFO:
+      mvwprintw(env->top,0,0,"[%s] Help for xinfo window",env->nodename);
+      mvwprintw(env->body,row++,col,"   %c    - Quit xinfo.",UFU_KEY_QUIT);
+      mvwprintw(env->body,row++,col," <up>   - To previous entry.");
+      mvwprintw(env->body,row++,col," <dn>   - To next entry.");
+      mvwprintw(env->body,row++,col," <pp>   - To previous page of entries.");
+      mvwprintw(env->body,row++,col," <np>   - To next page of entries.");
+      mvwprintw(env->body,row++,col,"   %c    - To first entry.",UFU_KEY_FIRST);
+      mvwprintw(env->body,row++,col,"   %c    - To last panel.",UFU_KEY_LAST);
+      mvwprintw(env->body,row++,col,"   %c    - Info entry.",UFU_KEY_INFO);
+      mvwprintw(env->body,row++,col,"<enter> - Info entry.");
+      break;
+
+    case UFU_HELP_SELECT_ACTION:
+    case UFU_HELP_SELECT_PANEL:
+    case UFU_HELP_SELECT_PATH:
+      mvwprintw(env->top,0,0,"[%s] Help for select window",env->nodename);
+      mvwprintw(env->body,row++,col,"   %c    - Quit.",UFU_KEY_QUIT);
+      mvwprintw(env->body,row++,col," <up>   - To previous line.");
+      mvwprintw(env->body,row++,col," <dn>   - To next line.");
+      mvwprintw(env->body,row++,col,"   %c    - To first line.",UFU_KEY_FIRST);
+      mvwprintw(env->body,row++,col,"   %c    - To last line.",UFU_KEY_LAST);
+      mvwprintw(env->body,row++,col,"<enter> - Select.");
+      break;
+
+    case UFU_HELP_MARK:
+      mvwprintw(env->top,0,0,"[%s] Help for marked entries",env->nodename);
+      mvwprintw(env->body,row++,col,"   %c    - Quit marked entries.",UFU_KEY_QUIT);
+      mvwprintw(env->body,row++,col," <up>   - To previous marked entry.");
+      mvwprintw(env->body,row++,col," <dn>   - To next marked entry.");
+      mvwprintw(env->body,row++,col," <pp>   - To previous page of marked entries.");
+      mvwprintw(env->body,row++,col," <np>   - To next page of marked entries.");
+      mvwprintw(env->body,row++,col,"   %c    - To first set of marked entries.",UFU_KEY_FIRST);
+      mvwprintw(env->body,row++,col,"   %c    - To next set of marked entries.",UFU_KEY_LAST);
+      mvwprintw(env->body,row++,col,"   %c    - Info entry.",UFU_KEY_INFO);
+      mvwprintw(env->body,row++,col,"<space> - Unmark entry.");
+      mvwprintw(env->body,row++,col,"   %c    - Search marked entries.",UFU_KEY_SEARCH);
+      mvwprintw(env->body,row++,col,"   %c    - View file.",UFU_KEY_VIEW);
+      mvwprintw(env->body,row++,col,"   %c    - Edit file.",UFU_KEY_EDIT);
+      mvwprintw(env->body,row++,col,"   %c    - View logfile \"%s\".",UFU_KEY_LOG,env->logname);
+      mvwprintw(env->body,row++,col,"   %c    - Actions!",UFU_KEY_MARK_ACTION);
+      break;
+
+    case UFU_HELP_REMOTE:
+      mvwprintw(env->top,0,0,"[%s] Help for remote entries",env->nodename);
+      mvwprintw(env->body,row++,col,"   %c    - Quit remote entries.",UFU_KEY_QUIT);
+      mvwprintw(env->body,row++,col," <up>   - To previous remote entry.");
+      mvwprintw(env->body,row++,col," <dn>   - To next remote entry.");
+      mvwprintw(env->body,row++,col," <pp>   - To previous page of remote entries.");
+      mvwprintw(env->body,row++,col," <np>   - To next page of remote entries.");
+      mvwprintw(env->body,row++,col,"   %c    - To first set of remote entries.",UFU_KEY_FIRST);
+      mvwprintw(env->body,row++,col,"   %c    - To next set of remote entries.",UFU_KEY_LAST);
+      mvwprintw(env->body,row++,col,"   %c    - Connect to remote entry.",UFU_KEY_CONNECT);
+      mvwprintw(env->body,row++,col,"   %c    - Edit remote entry.",UFU_KEY_EDIT);
+      mvwprintw(env->body,row++,col,"   %c    - Add remote entry.",UFU_KEY_APPEND);
+      mvwprintw(env->body,row++,col,"   %c    - Remove remote entry.",UFU_KEY_ERASE);
+      mvwprintw(env->body,row++,col,"   %c    - Enter password.",UFU_KEY_CLEAR);
+
+      break;
+
+    case UFU_HELP_UCMD:
+      mvwprintw(env->top,0,0,"[%s] Help for usercommands",env->nodename);
+      mvwprintw(env->body,row++,col,"   %c    - Quit usercommands.",UFU_KEY_QUIT);
+      mvwprintw(env->body,row++,col," <up>   - To previous usercommand.");
+      mvwprintw(env->body,row++,col," <dn>   - To next usercommand.");
+      mvwprintw(env->body,row++,col," <pp>   - To previous page of usercommands.");
+      mvwprintw(env->body,row++,col," <np>   - To next page of usercommands.");
+      mvwprintw(env->body,row++,col,"   %c    - To first set of usercommands.",UFU_KEY_FIRST);
+      mvwprintw(env->body,row++,col,"   %c    - To next set of usercommands.",UFU_KEY_LAST);
+      mvwprintw(env->body,row++,col,"   %c    - Edit usercommand.",UFU_KEY_EDIT);
+      mvwprintw(env->body,row++,col,"   %c    - Add usercommand.",UFU_KEY_APPEND);
+      mvwprintw(env->body,row++,col,"   %c    - Remove usercommand.",UFU_KEY_ERASE);
+      mvwprintw(env->body,row++,col,"<enter> - Execute usercommand.");
+      mvwprintw(env->body,row++,col,"");
+      mvwprintw(env->body,row++,col-6,"Substitutions - {A} will be replaced by the absolute filename.");
+      mvwprintw(env->body,row++,col-6,"              - {R} will be replaced by the relative filename.");
+      mvwprintw(env->body,row++,col-6,"              - {B} will be replaced by the basename.");
+      break;
+
+    case UFU_HELP_RL:
+      mvwprintw(env->top,0,0,"[%s] Help for input",env->nodename);
+      mvwprintw(env->body,row++,col,"   %c    - Quit input.",UFU_KEY_QUIT);
+      mvwprintw(env->body,row++,col," <pp>   - To previous word.");
+      mvwprintw(env->body,row++,col,"   b    - To previous word.");
+      mvwprintw(env->body,row++,col," <np>   - To next word.");
+      mvwprintw(env->body,row++,col,"   w    - To next word.");
+      mvwprintw(env->body,row++,col,"<bspace>- Delete character before cursor.");
+      mvwprintw(env->body,row++,col,"   i    - Insert mode on.");
+      mvwprintw(env->body,row++,col," <enter>- Insert mode off.");
+      mvwprintw(env->body,row++,col,"   x    - Delete character under cursor.");
+      mvwprintw(env->body,row++,col,"   D    - Delete to end of line.");
+      mvwprintw(env->body,row++,col,"   d    - Delete to beginning of line.");
+      mvwprintw(env->body,row++,col," <left> - Character left.");
+      mvwprintw(env->body,row++,col," <right>- Character right.");
+      break;
+
+    default:
+      mvwprintw(env->top,0,0,"[%s] Help!",env->nodename);
+      mvwprintw(env->body,4,(env->cols-34)/2,"No help defined for this function!");
+      break;
+
+  }
+
+  ufu_wrefresh(env->top);
+  ufu_wrefresh(env->body);
+
+  ufu_any_key(env);
+
+}
+

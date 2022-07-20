@@ -769,14 +769,14 @@ void ufu_info_entry(struct s_env *env,struct s_entry *e,int p,struct s_mark *mar
       mvwprintw(env->body,row++,12,"Panel/Seqno: %d/%d",mark->panel,mark->seqno);
       mvwprintw(env->body,row++,18,"Level: %d",mark->level);
       if(env->panel[p]->remote) {
-        mvwprintw(env->body,row++,2,"Remote daemon version: %s",env->panel[mark->panel]->rem->dversion);
+        // mvwprintw(env->body,row++,2,"Remote daemon version: %s",env->panel[mark->panel]->rem->dversion);
         mvwprintw(env->body,row++,12,"Credentials: %s!%s",env->panel[mark->panel]->rem->hostname,env->panel[mark->panel]->rem->username);
       }
       break;
     case UFU_INFO_ENTRY:
       mvwprintw(env->body,row++,12,"Panel/Seqno: %d/%d",p,e->seqno);
       if(env->panel[p]->remote) {
-        mvwprintw(env->body,row++,2,"Remote daemon version: %s",env->panel[p]->rem->dversion);
+        // mvwprintw(env->body,row++,2,"Remote daemon version: %s",env->panel[p]->rem->dversion);
         mvwprintw(env->body,row++,12,"Credentials: %s!%s",env->panel[p]->rem->hostname,env->panel[p]->rem->username);
       }
       break;
@@ -784,7 +784,7 @@ void ufu_info_entry(struct s_env *env,struct s_entry *e,int p,struct s_mark *mar
       mvwprintw(env->body,row++,18,"Panel: %d",p);
       strcpy(env->panel[p]->dirname,e->fname);
       if(env->panel[p]->remote) {
-        mvwprintw(env->body,row++,2,"Remote daemon version: %s",env->panel[p]->rem->dversion);
+        // mvwprintw(env->body,row++,2,"Remote daemon version: %s",env->panel[p]->rem->dversion);
         mvwprintw(env->body,row++,12,"Credentials: %s!%s",env->panel[p]->rem->hostname,env->panel[p]->rem->username);
       }
       break;
